@@ -13,7 +13,7 @@
 <link rel="apple-touch-icon" href="apple-touch-icon.png">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&family=Oswald:wght@500;600;700&display=swap" rel="stylesheet">
 <style>
 :root{
   --iron:#111316;
@@ -22,7 +22,7 @@
   --line:#2E333A;
   --chalk:#EDEAE3;
   --chalk-dim:#8B9199;
-  --ok:#16A34A;
+  --ok:#39FF14;
   --warn:#C8102E;
   --display:"Barlow Condensed", "Oswald", Impact, sans-serif;
   --body:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
@@ -61,8 +61,9 @@ main{padding:16px 16px 24px;max-width:640px;margin:0 auto}
 .btn.sm{padding:9px;font-size:14px}
 .inline{display:flex;gap:8px}
 .inline>*{flex:1}
-input[type=text],input[type=number],select{width:100%;background:var(--iron-3);border:1px solid var(--line);
+input[type=text],input[type=number],input[type=color],select{width:100%;background:var(--iron-3);border:1px solid var(--line);
   border-radius:7px;padding:11px;color:var(--chalk)}
+input[type=color]{height:44px;padding:4px;cursor:pointer}
 label.f{display:block;margin-bottom:10px}
 label.f .tiny{display:block;margin-bottom:4px}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:26px 18px;text-align:center;color:var(--chalk-dim)}
@@ -85,7 +86,9 @@ label.f .tiny{display:block;margin-bottom:4px}
 .setrow:last-child{border-bottom:none}
 .setrow.done{background:rgba(237,234,227,.05)}
 .setrow.done .idx{color:var(--chalk)}
-.idx{font-family:var(--display);font-size:17px;color:var(--chalk-dim);text-align:center}
+.setrow.warm{opacity:.5}
+.setrow.warm .idx{color:var(--warn)}
+.idx{font-family:var(--display);font-size:17px;color:var(--chalk-dim);text-align:center;cursor:pointer;border-radius:5px;padding:4px 0}
 .setrow input{padding:9px;text-align:center;font-family:var(--display);font-size:18px;font-weight:600}
 .check{width:82px;height:42px;border-radius:7px;border:1px solid var(--line);background:var(--iron-3);
   display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:16px;
@@ -137,16 +140,20 @@ nav .dot{font-size:17px;line-height:1}
 .chart circle{fill:var(--chalk)}
 .chart line{stroke:var(--line);stroke-width:1}
 
+.tag{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:4px;background:var(--iron-3);border:1px solid var(--line);
+  color:var(--chalk-dim);font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;vertical-align:middle}
+
 /* PR-merke */
-.pr{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:4px;background:var(--ok);color:#fff;
-  font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;vertical-align:middle}
+.pr{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:4px;background:var(--ok);color:#06210a;
+  font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;vertical-align:middle;
+  box-shadow:0 0 6px 1px var(--ok),0 0 14px 2px color-mix(in srgb,var(--ok) 60%,transparent)}
 
 /* merker / achievements */
 .badge{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:1px solid var(--line);
   background:var(--iron-2);margin-bottom:8px;opacity:.4}
-.badge.on{opacity:1;border-color:var(--ok)}
+.badge.on{opacity:1;border-color:var(--ok);box-shadow:0 0 10px -3px var(--ok),inset 0 0 16px -8px var(--ok)}
 .badge-ic{font-family:var(--display);font-size:22px;width:26px;text-align:center;color:var(--chalk-dim);flex-shrink:0}
-.badge.on .badge-ic{color:var(--ok)}
+.badge.on .badge-ic{color:var(--ok);text-shadow:0 0 8px var(--ok)}
 .badge-name{font-family:var(--display);font-size:16px;text-transform:uppercase;letter-spacing:.02em;display:block}
 .badge-desc{font-size:12px;color:var(--chalk-dim);display:block;margin-top:2px}
 
@@ -211,9 +218,11 @@ const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"
 /* ---------- start-data ---------- */
 function seed(){
   const ex=(name,muscle)=>({id:uid(),name,muscle});
+  const cardioEx=name=>({id:uid(),name,type:"cardio"});
   const E=[ex("Knebøy","Bein"),ex("Markløft","Rygg"),ex("Benkpress","Bryst"),ex("Stangroing","Rygg"),
     ex("Skulderpress","Skulder"),ex("Nedtrekk","Rygg"),ex("Beinpress","Bein"),ex("Rumensk markløft","Bakside"),
-    ex("Dips","Bryst"),ex("Biceps curl","Arm"),ex("Triceps pushdown","Arm"),ex("Planke","Kjerne")];
+    ex("Dips","Bryst"),ex("Biceps curl","Arm"),ex("Triceps pushdown","Arm"),ex("Planke","Kjerne"),
+    cardioEx("Sykling"),cardioEx("Gåing/jogging (tredemølle)")];
   const byName=n=>E.find(e=>e.name===n).id;
   const it=(n,sets,reps)=>({exerciseId:byName(n),sets,reps,restSec:60});
   return {
@@ -224,8 +233,21 @@ function seed(){
       {id:uid(),name:"Økt C",items:[it("Beinpress",3,10),it("Rumensk markløft",3,8),it("Dips",3,8),it("Triceps pushdown",3,12)]}
     ]}],
     sessions:[], active:null, unlocked:[],
-    settings:{rest:60,restEx:60,bar:20,sound:true}
+    settings:{rest:60,restEx:60,bar:20,sound:true,notify:false,accent:"#39FF14",unit:"kg",font:"barlow",fontSize:"normal"}
   };
+}
+const DEFAULT_SETTINGS={rest:60,restEx:60,bar:20,sound:true,notify:false,accent:"#39FF14",unit:"kg",font:"barlow",fontSize:"normal"};
+const FONT_STACKS={
+  barlow:'"Barlow Condensed","Oswald",Impact,sans-serif',
+  oswald:'"Oswald","Barlow Condensed",Impact,sans-serif',
+  impact:'Impact,"Barlow Condensed",sans-serif',
+  system:'-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,sans-serif'
+};
+const FONT_SIZES={sm:"87.5%",normal:"100%",lg:"112.5%",xl:"125%"};
+function applyTheme(){
+  document.documentElement.style.setProperty("--ok",S.settings.accent);
+  document.documentElement.style.setProperty("--display",FONT_STACKS[S.settings.font]||FONT_STACKS.barlow);
+  document.body.style.zoom=FONT_SIZES[S.settings.fontSize]||"100%";
 }
 let S=seed(), tab="train", chartEx=null;
 
@@ -233,11 +255,17 @@ async function save(){ await Store.set(JSON.stringify(S)); }
 async function load(){
   const raw=await Store.get();
   if(raw){ try{ const p=JSON.parse(raw); if(p&&p.exercises) S=Object.assign(seed(),p);}catch(e){} }
-  S.settings=Object.assign({rest:60,restEx:60,bar:20,sound:true},S.settings||{});
+  S.settings=Object.assign({},DEFAULT_SETTINGS,S.settings||{});
   S.unlocked=S.unlocked||[];
+  applyTheme();
 }
 const exName=id=>{const e=S.exercises.find(x=>x.id===id);return e?e.name:"Ukjent øvelse"};
 const exNote=id=>{const e=S.exercises.find(x=>x.id===id);return e&&e.note?e.note:""};
+const isCardio=id=>{const e=S.exercises.find(x=>x.id===id);return !!(e&&e.type==="cardio")};
+const KG_PER_LB=0.45359237;
+const dispW=kg=>{const v=S.settings.unit==="lb"?(+kg||0)/KG_PER_LB:(+kg||0);return Math.round(v*100)/100};
+const storeW=v=>{v=+v||0;return S.settings.unit==="lb"?v*KG_PER_LB:v};
+const unitLbl=()=>S.settings.unit==="lb"?"lb":"kg";
 
 /* ---------- vektskiver ---------- */
 const PLATES=[[25,"p25"],[20,"p20"],[15,"p15"],[10,"p10"],[5,"p5"],[2.5,"p2"],[1.25,"p1"]];
@@ -254,15 +282,31 @@ function plateHTML(total){
 function startSession(prog,day){
   S.active={id:uid(),name:day?day.name:"Fri økt",programId:prog?prog.id:null,startedAt:Date.now(),
     entries:(day?day.items:[]).map(i=>({exerciseId:i.exerciseId,restSec:i.restSec||S.settings.rest,
-      sets:Array.from({length:i.sets},()=>({weight:lastWeight(i.exerciseId),reps:i.reps,done:false}))}))};
+      sets: isCardio(i.exerciseId)
+        ? Array.from({length:i.sets||1},()=>({distanceKm:"",durationMin:"",done:false}))
+        : Array.from({length:i.sets},()=>({weight:lastWeight(i.exerciseId),reps:i.reps,done:false}))}))};
   save(); go("train");
 }
 function lastWeight(exId){
   for(let i=S.sessions.length-1;i>=0;i--){
     const e=S.sessions[i].entries.find(x=>x.exerciseId===exId);
-    if(e){const d=e.sets.filter(s=>s.done);if(d.length)return d[d.length-1].weight;}
+    if(e){const d=e.sets.filter(s=>s.done&&!s.warmup);if(d.length)return d[d.length-1].weight;}
   }
   return "";
+}
+function suggestedWeight(exId){
+  for(let i=S.sessions.length-1;i>=0;i--){
+    const e=S.sessions[i].entries.find(x=>x.exerciseId===exId);
+    if(e){
+      const work=e.sets.filter(s=>!s.warmup&&(+s.weight||0)>0);
+      if(work.length){
+        const top=work.reduce((m,s)=>((+s.weight)>(+m.weight)?s:m),work[0]);
+        const inc=S.settings.unit==="lb"?5*KG_PER_LB:2.5;
+        return +top.weight+inc;
+      }
+    }
+  }
+  return null;
 }
 function finishSession(){
   const a=S.active; if(!a) return;
@@ -275,12 +319,12 @@ function finishSession(){
   if(hadEntries) showFinishSummary(a);
   save(); render();
 }
-function volume(s){return s.entries.reduce((t,e)=>t+e.sets.reduce((v,x)=>v+(+x.weight||0)*(+x.reps||0),0),0)}
+function volume(s){return s.entries.reduce((t,e)=>t+e.sets.reduce((v,x)=>v+(x.warmup?0:(+x.weight||0)*(+x.reps||0)),0),0)}
 function allTimeBest(exId){
   let best=0;
   S.sessions.forEach(s=>{
     const e=s.entries.find(x=>x.exerciseId===exId);
-    if(e) e.sets.forEach(st=>{ const w=+st.weight||0; if(w>best) best=w; });
+    if(e) e.sets.forEach(st=>{ if(st.warmup) return; const w=+st.weight||0; if(w>best) best=w; });
   });
   return best;
 }
@@ -313,7 +357,10 @@ const ACHIEVEMENTS=[
     t=>`Løft ${t} kg i ett sett`,"●","maxSingleSet",[60,80,100,120,140,160,180,200,250,300]),
   ...tierAchievements("tot","Totalt sett",
     ["Oppvarming","Går seg til","Rutinert","Sett-samler","Settmaskin","Repetisjonskonge","Settlegende","Ti tusen sett"],
-    t=>`Fullfør ${t.toLocaleString("nb-NO")} sett totalt`,"▮","totalSets",[50,100,250,500,1000,2000,5000,10000])
+    t=>`Fullfør ${t.toLocaleString("nb-NO")} sett totalt`,"▮","totalSets",[50,100,250,500,1000,2000,5000,10000]),
+  ...tierAchievements("cardio","Kondisjon",
+    ["Første kilometer","Oppvarmet","Turgåer","Syklist","Ultraløper","Langtur","Verdensomseiler"],
+    t=>`Logg ${t} km oppvarming/kondisjon totalt`,"◐","totalCardioKm",[5,25,50,100,250,500,1000])
 ];
 function weekStart(ts){
   const d=new Date(ts); const day=(d.getDay()+6)%7;
@@ -332,12 +379,17 @@ function computeWeekStreak(){
   return best;
 }
 function achievementStats(){
-  let volume=0, prs=0, maxSetsInSession=0, totalSets=0, maxSingleSet=0; const exSet=new Set();
+  let volume=0, prs=0, maxSetsInSession=0, totalSets=0, maxSingleSet=0, totalCardioKm=0; const exSet=new Set();
   S.sessions.forEach(s=>{
     let setsInSession=0;
     s.entries.forEach(e=>{
+      if(isCardio(e.exerciseId)){
+        e.sets.forEach(st=>{ totalCardioKm+=(+st.distanceKm||0); });
+        return;
+      }
       exSet.add(e.exerciseId);
       e.sets.forEach(st=>{
+        if(st.warmup) return;
         const w=+st.weight||0;
         volume+=w*(+st.reps||0);
         setsInSession++; totalSets++;
@@ -347,7 +399,7 @@ function achievementStats(){
     });
     if(setsInSession>maxSetsInSession) maxSetsInSession=setsInSession;
   });
-  return {sessions:S.sessions.length, volume, prs, exVariety:exSet.size, maxSetsInSession, totalSets, maxSingleSet, weekStreak:computeWeekStreak()};
+  return {sessions:S.sessions.length, volume, prs, exVariety:exSet.size, maxSetsInSession, totalSets, maxSingleSet, weekStreak:computeWeekStreak(), totalCardioKm};
 }
 function checkNewAchievements(){
   const st=achievementStats();
@@ -470,6 +522,9 @@ setInterval(()=>{
     stopRest();
     if(navigator.vibrate) navigator.vibrate([220,110,220]);
     beep(880,0.25); setTimeout(()=>beep(880,0.25),300);
+    if(S.settings.notify&&typeof Notification!=="undefined"&&Notification.permission==="granted"&&navigator.serviceWorker){
+      navigator.serviceWorker.ready.then(reg=>reg.showNotification("Hvilen er over!",{body:"Klar for neste sett.",tag:"jern-rest",renotify:true,vibrate:[220,110,220]}));
+    }
   }
 },200);
 
@@ -506,7 +561,8 @@ function activeHTML(){
       <div class="restin" style="margin-top:12px"><span class="tiny">Hvile mellom øvelser</span>
       <input type="number" inputmode="numeric" min="0" step="15" value="${S.settings.restEx}" data-rex="1"><span class="tiny">sek</span></div></div>`;
   a.entries.forEach((e,ei)=>{
-    const top=e.sets.reduce((m,s)=>Math.max(m,+s.weight||0),0);
+    if(isCardio(e.exerciseId)){ h+=cardioHTML(e,ei); return; }
+    const top=e.sets.reduce((m,s)=>Math.max(m,s.warmup?0:(+s.weight||0)),0);
     const isPR=top>0&&top>allTimeBest(e.exerciseId);
     const note=exNote(e.exerciseId);
     h+=`<div class="ex"><div class="ex-head"><span class="name">${esc(exName(e.exerciseId))}${isPR?'<span class="pr">Ny PR</span>':""}</span>
@@ -519,9 +575,9 @@ function activeHTML(){
       if(s.done){cls="on";lbl="✓";act="undoset"}
       else if(isCd){cls="cd";lbl="5";act="cancelset"}
       else if(isRun){cls="run";lbl="0:00";act="doneset"}
-      h+=`<div class="setrow ${s.done?"done":""}">
-        <span class="idx">${si+1}</span>
-        <input type="number" inputmode="decimal" step="1.25" placeholder="kg" value="${s.weight===""?"":s.weight}" data-f="weight" data-e="${ei}" data-s="${si}">
+      h+=`<div class="setrow ${s.done?"done":""} ${s.warmup?"warm":""}">
+        <span class="idx" data-act="togglewarm" data-e="${ei}" data-s="${si}" title="Marker som oppvarming">${s.warmup?"O":si+1}</span>
+        <input type="number" inputmode="decimal" step="1.25" placeholder="${unitLbl()}" value="${s.weight===""?"":dispW(s.weight)}" data-f="weight" data-e="${ei}" data-s="${si}">
         <input type="number" inputmode="numeric" placeholder="reps" value="${s.reps===""?"":s.reps}" data-f="reps" data-e="${ei}" data-s="${si}">
         <button class="check ${cls}" data-btn="${ei}-${si}" data-act="${act}" data-e="${ei}" data-s="${si}">${lbl}</button>
       </div>`;
@@ -531,8 +587,9 @@ function activeHTML(){
       <button data-act="delset" data-e="${ei}">− Sett</button>
       <button data-act="rmex" data-e="${ei}">Fjern øvelse</button></div>`;
     const prev=prevBest(e.exerciseId);
-    if(prev) h+=`<div class="hint">Forrige gang: ${prev}</div>`;
-    if(ei===0&&!e.sets.some(s=>s.done)) h+=`<div class="hint">Start teller ned fra 5. Trykk på knappen igjen når settet er ferdig — da går hviletimeren.</div>`;
+    const sugg=suggestedWeight(e.exerciseId);
+    if(prev) h+=`<div class="hint">Forrige gang: ${prev}${sugg?` · Prøv ${dispW(sugg)} ${unitLbl()} denne gangen`:""}</div>`;
+    if(ei===0&&!e.sets.some(s=>s.done)) h+=`<div class="hint">Start teller ned fra 5. Trykk på knappen igjen når settet er ferdig — da går hviletimeren. Trykk på settnummeret for å markere oppvarming (telles ikke i statistikk).</div>`;
     h+=`</div>`;
   });
   h+=`<button class="btn ghost sm" data-act="addex" style="margin-bottom:10px">+ Legg til øvelse</button>
@@ -542,12 +599,37 @@ function activeHTML(){
 function prevBest(exId){
   for(let i=S.sessions.length-1;i>=0;i--){
     const e=S.sessions[i].entries.find(x=>x.exerciseId===exId);
-    if(e&&e.sets.length){
-      const b=e.sets.reduce((m,s)=>((+s.weight||0)>(+m.weight||0)?s:m),e.sets[0]);
-      return `${b.weight||0} kg × ${b.reps} (${new Date(S.sessions[i].startedAt).toLocaleDateString("nb-NO")})`;
+    if(e){
+      const work=e.sets.filter(s=>!s.warmup);
+      if(work.length){
+        const b=work.reduce((m,s)=>((+s.weight||0)>(+m.weight||0)?s:m),work[0]);
+        return `${dispW(b.weight||0)} ${unitLbl()} × ${b.reps} (${new Date(S.sessions[i].startedAt).toLocaleDateString("nb-NO")})`;
+      }
     }
   }
   return null;
+}
+function cardioHTML(e,ei){
+  const note=exNote(e.exerciseId);
+  let h=`<div class="ex"><div class="ex-head"><span class="name">${esc(exName(e.exerciseId))}<span class="tag">Kondisjon</span></span></div>`;
+  if(note) h+=`<div class="hint" style="padding-top:8px;border-bottom:1px solid rgba(46,51,58,.5)">${esc(note)}</div>`;
+  e.sets.forEach((s,si)=>{
+    const isRun=running&&running.ei===ei&&running.si===si;
+    let cls="",lbl="Start",act="startcardio";
+    if(s.done){cls="on";lbl="✓";act="undonecardio"}
+    else if(isRun){cls="run";lbl="0:00";act="donecardio"}
+    h+=`<div class="setrow ${s.done?"done":""}">
+      <span class="idx">${si+1}</span>
+      <input type="number" inputmode="decimal" step="0.1" placeholder="km" value="${s.distanceKm===""?"":s.distanceKm}" data-cf="distanceKm" data-e="${ei}" data-s="${si}">
+      <input type="number" inputmode="numeric" placeholder="min" value="${s.durationMin===""?"":s.durationMin}" data-cf="durationMin" data-e="${ei}" data-s="${si}">
+      <button class="check ${cls}" data-btn="${ei}-${si}" data-act="${act}" data-e="${ei}" data-s="${si}">${lbl}</button>
+    </div>`;
+  });
+  h+=`<div class="ex-foot"><button data-act="addset" data-e="${ei}">+ Sett</button>
+    <button data-act="delset" data-e="${ei}">− Sett</button>
+    <button data-act="rmex" data-e="${ei}">Fjern øvelse</button></div>`;
+  if(ei===0&&!e.sets.some(s=>s.done)) h+=`<div class="hint">Trykk Start for å ta tiden automatisk, eller skriv km/min manuelt. Trykk igjen når du er ferdig.</div>`;
+  return h+`</div>`;
 }
 
 /* ---------- visning: PROGRAM ---------- */
@@ -570,7 +652,7 @@ function viewProg(){
       <div class="tiny" style="margin-bottom:8px">Øvelser (${S.exercises.length})</div>`;
   S.exercises.forEach(ex=>{
     h+=`<button class="item" data-act="editex" data-id="${ex.id}">
-      <span class="grow"><span class="name" style="font-size:16px">${esc(ex.name)}</span>
+      <span class="grow"><span class="name" style="font-size:16px">${esc(ex.name)}${ex.type==="cardio"?'<span class="tag">Kondisjon</span>':""}</span>
       <div class="meta">${esc(ex.muscle||"")}${ex.note?" · "+esc(ex.note):""}</div></span>
       <span class="chev">›</span></button>`;
   });
@@ -589,13 +671,13 @@ function viewLog(){
   const kg=S.sessions.reduce((t,s)=>t+volume(s),0);
   h+=`<div class="card row" style="gap:20px">
     <div><div class="tiny">Økter</div><div class="num" style="font-size:30px">${done}</div></div>
-    <div><div class="tiny">Totalt volum</div><div class="num" style="font-size:30px">${Math.round(kg).toLocaleString("nb-NO")}<span style="font-size:15px"> kg</span></div></div>
+    <div><div class="tiny">Totalt volum</div><div class="num" style="font-size:30px">${Math.round(dispW(kg)).toLocaleString("nb-NO")}<span style="font-size:15px"> ${unitLbl()}</span></div></div>
     <div><div class="tiny">Siste</div><div class="num" style="font-size:30px">${new Date(S.sessions[done-1].startedAt).toLocaleDateString("nb-NO",{day:"numeric",month:"short"})}</div></div>
   </div>`;
 
   h+=achievementsHTML();
 
-  const ids=[...new Set(S.sessions.flatMap(s=>s.entries.map(e=>e.exerciseId)))];
+  const ids=[...new Set(S.sessions.flatMap(s=>s.entries.filter(e=>!isCardio(e.exerciseId)).map(e=>e.exerciseId)))];
   if(!chartEx||!ids.includes(chartEx)) chartEx=ids[0];
   h+=`<div class="card"><div class="tiny" style="margin-bottom:8px">Progresjon — tyngste sett</div>
     <select id="chartSel">${ids.map(i=>`<option value="${i}" ${i===chartEx?"selected":""}>${esc(exName(i))}</option>`).join("")}</select>
@@ -605,9 +687,17 @@ function viewLog(){
   [...S.sessions].reverse().forEach(s=>{
     const d=new Date(s.startedAt), min=s.endedAt?Math.round((s.endedAt-s.startedAt)/60000):0;
     const anyPR=s.entries.some(e=>e.sets.some(st=>st.isPR));
+    const entrySummary=s.entries.map(e=>{
+      if(isCardio(e.exerciseId)){
+        const km=e.sets.reduce((t,x)=>t+(+x.distanceKm||0),0), dmin=e.sets.reduce((t,x)=>t+(+x.durationMin||0),0);
+        const bits=[km?`${km} km`:null,dmin?`${dmin} min`:null].filter(Boolean).join(" / ");
+        return `${exName(e.exerciseId)}${bits?" "+bits:""}`;
+      }
+      return `${exName(e.exerciseId)} ${e.sets.length}×`;
+    }).join(" · ");
     h+=`<div class="item" data-act="editsession" data-id="${s.id}"><span class="grow"><span class="name" style="font-size:17px">${esc(s.name)}${anyPR?'<span class="pr">PR</span>':""}</span>
-      <div class="meta">${d.toLocaleDateString("nb-NO",{weekday:"short",day:"numeric",month:"short"})} · ${min} min · ${Math.round(volume(s)).toLocaleString("nb-NO")} kg
-      <br>${s.entries.map(e=>`${exName(e.exerciseId)} ${e.sets.length}×`).join(" · ")}</div></span>
+      <div class="meta">${d.toLocaleDateString("nb-NO",{weekday:"short",day:"numeric",month:"short"})} · ${min} min · ${Math.round(dispW(volume(s))).toLocaleString("nb-NO")} ${unitLbl()}
+      <br>${entrySummary}</div></span>
       <button class="iconbtn" data-act="delsession" data-id="${s.id}" aria-label="Slett økt">✕</button></div>`;
   });
   $("#v-log").innerHTML=h;
@@ -616,7 +706,7 @@ function chartHTML(exId){
   const pts=[];
   S.sessions.forEach(s=>{
     const e=s.entries.find(x=>x.exerciseId===exId); if(!e) return;
-    const top=e.sets.reduce((m,x)=>Math.max(m,+x.weight||0),0);
+    const top=e.sets.reduce((m,x)=>Math.max(m,x.warmup?0:(+x.weight||0)),0);
     if(top>0) pts.push({t:s.startedAt,v:top});
   });
   if(pts.length<2) return `<div class="small muted" style="padding:16px 0">Trenger minst to økter med denne øvelsen for å tegne graf.</div>`;
@@ -629,8 +719,8 @@ function chartHTML(exId){
     <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}"/>
     <polyline points="${poly}"/>
     ${pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3"/>`).join("")}
-    <text x="${P}" y="14" fill="#8B9199" font-size="11" font-family="sans-serif">${max} kg</text>
-    <text x="${P}" y="${H-6}" fill="#8B9199" font-size="11" font-family="sans-serif">${min} kg</text>
+    <text x="${P}" y="14" fill="#8B9199" font-size="11" font-family="sans-serif">${dispW(max)} ${unitLbl()}</text>
+    <text x="${P}" y="${H-6}" fill="#8B9199" font-size="11" font-family="sans-serif">${dispW(min)} ${unitLbl()}</text>
   </svg>`;
 }
 
@@ -641,6 +731,8 @@ function closeDlg(){ $("#dlg").close(); }
 function dlgNewEx(){
   dlg(`<h2>Ny øvelse</h2>
     <label class="f"><span class="tiny">Navn</span><input type="text" id="nx-name" placeholder="F.eks. Frontbøy"></label>
+    <label class="f"><span class="tiny">Type</span>
+      <select id="nx-type"><option value="strength">Styrke (vekt × reps)</option><option value="cardio">Kondisjon (km / min)</option></select></label>
     <label class="f"><span class="tiny">Muskelgruppe</span><input type="text" id="nx-m" placeholder="Bein"></label>
     <label class="f"><span class="tiny">Notat (grep, teknikk o.l.)</span><input type="text" id="nx-note" placeholder="F.eks. bredt grep"></label>
     <div class="inline"><button class="btn ghost sm" data-act="close">Avbryt</button>
@@ -649,6 +741,11 @@ function dlgNewEx(){
 function dlgEditExercise(ex){
   dlg(`<h2>${esc(ex.name)}</h2>
     <label class="f"><span class="tiny">Navn</span><input type="text" id="ex-name" value="${esc(ex.name)}"></label>
+    <label class="f"><span class="tiny">Type</span>
+      <select id="ex-type">
+        <option value="strength" ${ex.type!=="cardio"?"selected":""}>Styrke (vekt × reps)</option>
+        <option value="cardio" ${ex.type==="cardio"?"selected":""}>Kondisjon (km / min)</option>
+      </select></label>
     <label class="f"><span class="tiny">Muskelgruppe</span><input type="text" id="ex-m" value="${esc(ex.muscle||"")}"></label>
     <label class="f"><span class="tiny">Notat (grep, teknikk o.l.)</span><input type="text" id="ex-note" value="${esc(ex.note||"")}" placeholder="F.eks. bredt grep"></label>
     <div class="inline"><button class="btn danger sm" data-act="delex" data-id="${ex.id}">Slett øvelse</button>
@@ -659,7 +756,7 @@ function dlgEditDay(p,d){
     <label class="f"><span class="tiny">Navn på økt</span><input type="text" id="dy-name" value="${esc(d.name)}"></label>
     <div class="tiny" style="margin-bottom:8px">Øvelser</div>
     ${d.items.length?d.items.map((i,ix)=>`<div class="setrow" style="grid-template-columns:1fr 52px 52px 34px;padding:6px 0">
-        <span class="small">${esc(exName(i.exerciseId))}</span>
+        <span class="small">${esc(exName(i.exerciseId))}${isCardio(i.exerciseId)?' <span class="tag">Kondisjon</span>':""}</span>
         <input type="number" value="${i.sets}" data-di="${ix}" data-df="sets" aria-label="Sett">
         <input type="number" value="${i.reps}" data-di="${ix}" data-df="reps" aria-label="Reps">
         <button class="iconbtn" data-act="rmitem" data-di="${ix}">✕</button></div>`).join(""):`<div class="small muted">Ingen øvelser ennå.</div>`}
@@ -675,13 +772,21 @@ function dlgEditSession(s){
   if(!s) return;
   dlg(`<h2>${esc(s.name)}</h2>
     <div class="tiny" style="margin-bottom:12px">${new Date(s.startedAt).toLocaleDateString("nb-NO",{weekday:"short",day:"numeric",month:"short"})}</div>
-    ${s.entries.map((e,ei)=>`<div class="tiny" style="margin:14px 0 6px">${esc(exName(e.exerciseId))}</div>
-      ${e.sets.map((st,si)=>`<div class="setrow" style="grid-template-columns:24px 1fr 1fr 34px;padding:6px 0">
+    ${s.entries.map((e,ei)=>{
+      const cardio=isCardio(e.exerciseId);
+      const rows=e.sets.map((st,si)=>cardio?`<div class="setrow" style="grid-template-columns:24px 1fr 1fr 34px;padding:6px 0">
         <span class="idx">${si+1}</span>
-        <input type="number" step="1.25" value="${st.weight===""?"":st.weight}" data-se-e="${ei}" data-se-s="${si}" data-se-f="weight" aria-label="Vekt">
+        <input type="number" step="0.1" value="${st.distanceKm===""?"":st.distanceKm}" data-se-e="${ei}" data-se-s="${si}" data-se-f="distanceKm" aria-label="Km">
+        <input type="number" value="${st.durationMin===""?"":st.durationMin}" data-se-e="${ei}" data-se-s="${si}" data-se-f="durationMin" aria-label="Min">
+        <button class="iconbtn" data-act="rmsetedit" data-se-e="${ei}" data-se-s="${si}">✕</button>
+      </div>`:`<div class="setrow" style="grid-template-columns:24px 1fr 1fr 34px;padding:6px 0">
+        <span class="idx">${si+1}</span>
+        <input type="number" step="1.25" value="${st.weight===""?"":dispW(st.weight)}" data-se-e="${ei}" data-se-s="${si}" data-se-f="weight" aria-label="Vekt">
         <input type="number" value="${st.reps===""?"":st.reps}" data-se-e="${ei}" data-se-s="${si}" data-se-f="reps" aria-label="Reps">
         <button class="iconbtn" data-act="rmsetedit" data-se-e="${ei}" data-se-s="${si}">✕</button>
-      </div>`).join("")}`).join("")}
+      </div>`).join("");
+      return `<div class="tiny" style="margin:14px 0 6px">${esc(exName(e.exerciseId))}</div>${rows}`;
+    }).join("")}
     <div class="inline" style="margin-top:14px"><button class="btn danger sm" data-act="delsession" data-id="${s.id}">Slett økt</button>
     <button class="btn sm" data-act="close">Ferdig</button></div>`);
   $("#dlg").dataset.sid=s.id;
@@ -700,10 +805,30 @@ function dlgSettings(){
     <label class="f"><span class="tiny">Hvile mellom øvelser (sekunder)</span><input type="number" id="st-restex" step="15" value="${s.restEx}"></label>
     <label class="f"><span class="tiny">Stangvekt (kg)</span><input type="number" id="st-bar" step="0.5" value="${s.bar}"></label>
     <label class="f row" style="gap:10px"><input type="checkbox" id="st-snd" ${s.sound?"checked":""} style="width:auto"><span class="small">Lyd når hvilen er ferdig</span></label>
+    <label class="f row" style="gap:10px"><input type="checkbox" id="st-notify" ${s.notify?"checked":""} style="width:auto"><span class="small">Systemvarsel når hvilen er ferdig</span></label>
+    <div class="small muted" style="margin:-6px 0 12px">Krever tillatelse fra nettleseren. Fungerer best mens appen er åpen i bakgrunnen — ikke garantert med låst skjerm lenge.</div>
+    <label class="f"><span class="tiny">Aksentfarge</span><input type="color" id="st-accent" value="${s.accent}"></label>
+    <label class="f"><span class="tiny">Enhet for vekt</span>
+      <select id="st-unit"><option value="kg" ${s.unit!=="lb"?"selected":""}>Kilo (kg)</option><option value="lb" ${s.unit==="lb"?"selected":""}>Pund (lb)</option></select></label>
+    <label class="f"><span class="tiny">Font</span>
+      <select id="st-font">
+        <option value="barlow" ${s.font==="barlow"?"selected":""}>Barlow Condensed (standard)</option>
+        <option value="oswald" ${s.font==="oswald"?"selected":""}>Oswald</option>
+        <option value="impact" ${s.font==="impact"?"selected":""}>Impact</option>
+        <option value="system" ${s.font==="system"?"selected":""}>Systemfont</option>
+      </select></label>
+    <label class="f"><span class="tiny">Skriftstørrelse</span>
+      <select id="st-fontsize">
+        <option value="sm" ${s.fontSize==="sm"?"selected":""}>Liten</option>
+        <option value="normal" ${s.fontSize==="normal"?"selected":""}>Normal</option>
+        <option value="lg" ${s.fontSize==="lg"?"selected":""}>Stor</option>
+        <option value="xl" ${s.fontSize==="xl"?"selected":""}>Ekstra stor</option>
+      </select></label>
     <div class="sep"></div>
     <div class="inline" style="margin-bottom:10px"><button class="btn ghost sm" data-act="export">Eksporter data</button>
     <button class="btn ghost sm" data-act="importBtn">Importer</button></div>
     <input type="file" id="impFile" accept="application/json" style="display:none">
+    <button class="btn danger sm" data-act="resetall" style="margin-bottom:10px">Nullstill alle data</button>
     <div class="inline"><button class="btn ghost sm" data-act="close">Lukk</button>
     <button class="btn sm" data-act="savesettings">Lagre</button></div>`);
 }
@@ -734,7 +859,7 @@ document.addEventListener("click",async ev=>{
     const e=S.active.entries[ei], s=e.sets[si];
     const priorBest=allTimeBest(e.exerciseId);
     s.done=true; s.ts=Date.now();
-    if((+s.weight||0)>0&&(+s.weight||0)>priorBest) s.isPR=true;
+    if(!s.warmup&&(+s.weight||0)>0&&(+s.weight||0)>priorBest) s.isPR=true;
     if(running&&running.ei===ei&&running.si===si){ s.durSec=Math.round((Date.now()-running.start)/1000); }
     running=null;
     const lastInEx=e.sets.every(x=>x.done);
@@ -746,13 +871,41 @@ document.addEventListener("click",async ev=>{
     const e=S.active.entries[+b.dataset.e], s=e.sets[+b.dataset.s];
     s.done=false; s.isPR=false; stopRest(); await save(); render(); return;
   }
-  if(a==="addset"){ const e=S.active.entries[+b.dataset.e]; const l=e.sets[e.sets.length-1]||{weight:"",reps:""};
-    e.sets.push({weight:l.weight,reps:l.reps,done:false}); await save(); render(); return; }
+  if(a==="togglewarm"){
+    const s=S.active.entries[+b.dataset.e].sets[+b.dataset.s];
+    s.warmup=!s.warmup; await save(); render(); return;
+  }
+  if(a==="startcardio"){
+    running={ei:+b.dataset.e,si:+b.dataset.s,start:Date.now()}; render(); return;
+  }
+  if(a==="donecardio"){
+    const ei=+b.dataset.e, si=+b.dataset.s;
+    const s=S.active.entries[ei].sets[si];
+    if(running&&running.ei===ei&&running.si===si){
+      const mins=Math.round((Date.now()-running.start)/60000*10)/10;
+      if(!s.durationMin) s.durationMin=mins;
+    }
+    s.done=true; s.ts=Date.now(); running=null;
+    await save(); render(); return;
+  }
+  if(a==="undonecardio"){
+    const s=S.active.entries[+b.dataset.e].sets[+b.dataset.s];
+    s.done=false; await save(); render(); return;
+  }
+  if(a==="addset"){ const e=S.active.entries[+b.dataset.e];
+    if(isCardio(e.exerciseId)){ const l=e.sets[e.sets.length-1]||{distanceKm:"",durationMin:""};
+      e.sets.push({distanceKm:l.distanceKm,durationMin:l.durationMin,done:false});
+    } else { const l=e.sets[e.sets.length-1]||{weight:"",reps:""};
+      e.sets.push({weight:l.weight,reps:l.reps,done:false});
+    }
+    await save(); render(); return; }
   if(a==="delset"){ const e=S.active.entries[+b.dataset.e]; if(e.sets.length>1)e.sets.pop(); await save(); render(); return; }
   if(a==="rmex"){ S.active.entries.splice(+b.dataset.e,1); await save(); render(); return; }
   if(a==="addex"){ dlgPickEx(); return; }
   if(a==="pickex"){ const id=$("#pk").value; if(id){
-      S.active.entries.push({exerciseId:id,restSec:S.settings.rest,sets:[{weight:lastWeight(id),reps:8,done:false}]});
+      S.active.entries.push(isCardio(id)
+        ?{exerciseId:id,restSec:S.settings.rest,sets:[{distanceKm:"",durationMin:"",done:false}]}
+        :{exerciseId:id,restSec:S.settings.rest,sets:[{weight:lastWeight(id),reps:8,done:false}]});
       await save(); } closeDlg(); render(); return; }
   if(a==="finish"){ finishSession(); go("log"); return; }
   if(a==="cancel"){ if(confirm("Avbryt økta? Alt du har logget forsvinner.")){ S.active=null; cd=null; running=null; stopRest(); await save(); render(); } return; }
@@ -764,7 +917,8 @@ document.addEventListener("click",async ev=>{
   if(a==="editday"){ const p=S.programs.find(x=>x.id===b.dataset.p); dlgEditDay(p,p.days.find(x=>x.id===b.dataset.d)); return; }
   if(a==="additem"){ const id=$("#dy-add").value; if(!id) return;
     const p=S.programs.find(x=>x.id===$("#dlg").dataset.p), d=p.days.find(x=>x.id===$("#dlg").dataset.d);
-    d.items.push({exerciseId:id,sets:3,reps:8,restSec:S.settings.rest}); await save(); dlgEditDay(p,d); render(); return; }
+    d.items.push(isCardio(id)?{exerciseId:id,sets:1,reps:0,restSec:0}:{exerciseId:id,sets:3,reps:8,restSec:S.settings.rest});
+    await save(); dlgEditDay(p,d); render(); return; }
   if(a==="rmitem"){ const p=S.programs.find(x=>x.id===$("#dlg").dataset.p), d=p.days.find(x=>x.id===$("#dlg").dataset.d);
     d.items.splice(+b.dataset.di,1); await save(); dlgEditDay(p,d); render(); return; }
   if(a==="saveday"){ const p=S.programs.find(x=>x.id===$("#dlg").dataset.p), d=p.days.find(x=>x.id===$("#dlg").dataset.d);
@@ -773,13 +927,13 @@ document.addEventListener("click",async ev=>{
     const p=S.programs.find(x=>x.id===$("#dlg").dataset.p); p.days=p.days.filter(x=>x.id!==$("#dlg").dataset.d);
     await save(); closeDlg(); render(); return; }
   if(a==="newex"){ dlgNewEx(); return; }
-  if(a==="saveex"){ const n=$("#nx-name").value.trim(); if(n){S.exercises.push({id:uid(),name:n,muscle:$("#nx-m").value.trim(),note:$("#nx-note").value.trim()});await save();}
+  if(a==="saveex"){ const n=$("#nx-name").value.trim(); if(n){S.exercises.push({id:uid(),name:n,type:$("#nx-type").value,muscle:$("#nx-m").value.trim(),note:$("#nx-note").value.trim()});await save();}
     closeDlg(); render(); return; }
   if(a==="editex"){ const ex=S.exercises.find(x=>x.id===b.dataset.id); if(ex) dlgEditExercise(ex); return; }
   if(a==="saveexedit"){
     const ex=S.exercises.find(x=>x.id===b.dataset.id);
     const n=$("#ex-name").value.trim();
-    if(ex&&n){ ex.name=n; ex.muscle=$("#ex-m").value.trim(); ex.note=$("#ex-note").value.trim(); await save(); }
+    if(ex&&n){ ex.name=n; ex.type=$("#ex-type").value; ex.muscle=$("#ex-m").value.trim(); ex.note=$("#ex-note").value.trim(); await save(); }
     closeDlg(); render(); return;
   }
   if(a==="delex"){
@@ -807,7 +961,29 @@ document.addEventListener("click",async ev=>{
   if(a==="delsession"){ if(confirm("Slette denne økta fra loggen?")){ S.sessions=S.sessions.filter(s=>s.id!==b.dataset.id); await save(); closeDlg(); render(); } return; }
 
   if(a==="savesettings"){ S.settings.rest=+$("#st-rest").value||60; S.settings.restEx=+$("#st-restex").value||60; S.settings.bar=+$("#st-bar").value||20;
-    S.settings.sound=$("#st-snd").checked; await save(); closeDlg(); render(); return; }
+    S.settings.sound=$("#st-snd").checked;
+    S.settings.accent=$("#st-accent").value||"#39FF14";
+    S.settings.unit=$("#st-unit").value;
+    S.settings.font=$("#st-font").value;
+    S.settings.fontSize=$("#st-fontsize").value;
+    applyTheme();
+    const wantNotify=$("#st-notify").checked;
+    if(wantNotify&&typeof Notification!=="undefined"&&Notification.permission!=="granted"){
+      const perm=await Notification.requestPermission();
+      S.settings.notify=perm==="granted";
+      if(perm!=="granted") alert("Du må tillate varsler i nettleseren for at dette skal virke.");
+    } else {
+      S.settings.notify=wantNotify&&typeof Notification!=="undefined";
+    }
+    await save(); closeDlg(); render(); return; }
+  if(a==="resetall"){
+    if(confirm("Nullstille ALT? Dette sletter alle programmer, øvelser og hele loggen din permanent.")){
+      if(confirm("Helt sikker? Det er ingen vei tilbake fra dette.")){
+        S=seed(); applyTheme(); await save(); closeDlg(); render();
+      }
+    }
+    return;
+  }
   if(a==="export"){ const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
     const u=URL.createObjectURL(blob), l=document.createElement("a");
     l.href=u; l.download="jern-backup-"+new Date().toISOString().slice(0,10)+".json"; l.click();
@@ -827,7 +1003,11 @@ document.addEventListener("change",async ev=>{
   }
   if(t.dataset.seE!==undefined&&t.dataset.seF){
     const s=S.sessions.find(x=>x.id===$("#dlg").dataset.sid);
-    if(s) s.entries[+t.dataset.seE].sets[+t.dataset.seS][t.dataset.seF]=t.value===""?"":+t.value;
+    if(s){
+      const set=s.entries[+t.dataset.seE].sets[+t.dataset.seS];
+      if(t.value==="") set[t.dataset.seF]="";
+      else set[t.dataset.seF]=t.dataset.seF==="weight"?storeW(t.value):+t.value;
+    }
     await save(); return;
   }
   if(t.dataset.di!==undefined&&t.dataset.df){
@@ -849,12 +1029,19 @@ document.addEventListener("input",ev=>{
   }
   if(t.dataset.f&&S.active){
     const s=S.active.entries[+t.dataset.e].sets[+t.dataset.s];
-    s[t.dataset.f]=t.value===""?"":+t.value;
+    if(t.dataset.f==="weight") s.weight=t.value===""?"":storeW(t.value);
+    else s[t.dataset.f]=t.value===""?"":+t.value;
     clearTimeout(window._sv); window._sv=setTimeout(save,400);
   }
+  if(t.dataset.cf&&S.active){
+    const s=S.active.entries[+t.dataset.e].sets[+t.dataset.s];
+    s[t.dataset.cf]=t.value===""?"":+t.value;
+    clearTimeout(window._sv); window._sv=setTimeout(save,400);
+  }
+  if(t.id==="st-accent"){ document.documentElement.style.setProperty("--ok",t.value); return; }
 });
 $("#openSettings").addEventListener("click",dlgSettings);
-$("#dlg").addEventListener("close",render);
+$("#dlg").addEventListener("close",()=>{ document.documentElement.style.setProperty("--ok",S.settings.accent); render(); });
 
 /* ---------- hold skjermen våken under økt ---------- */
 let wl=null;

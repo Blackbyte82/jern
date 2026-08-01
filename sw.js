@@ -1,5 +1,5 @@
 /* JERN service worker — gjør appen brukbar uten nett. */
-const CACHE = "jern-v2";
+const CACHE = "jern-v4";
 const ASSETS = [
   "./",
   "./index.html",
@@ -24,6 +24,16 @@ self.addEventListener("activate", e => {
     caches.keys()
       .then(keys => Promise.all(keys.filter(k => k !== CACHE).map(k => caches.delete(k))))
       .then(() => self.clients.claim())
+  );
+});
+
+self.addEventListener("notificationclick", e => {
+  e.notification.close();
+  e.waitUntil(
+    self.clients.matchAll({ type: "window" }).then(list => {
+      if (list.length) return list[0].focus();
+      return self.clients.openWindow("./index.html");
+    })
   );
 });
 
