@@ -70,7 +70,7 @@ label.f .tiny{display:block;margin-bottom:4px}
 
 /* list item */
 .item{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--iron-2);border:1px solid var(--line);
-  border-radius:10px;margin-bottom:10px;width:100%;text-align:left}
+  border-radius:10px;margin-bottom:10px;width:100%;text-align:left;cursor:pointer}
 .item .grow{flex:1;min-width:0}
 .item .name{font-family:var(--display);font-size:19px;text-transform:uppercase;letter-spacing:.02em}
 .item .meta{font-size:12px;color:var(--chalk-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
@@ -136,6 +136,19 @@ nav .dot{font-size:17px;line-height:1}
 .chart polyline{fill:none;stroke:var(--chalk);stroke-width:2}
 .chart circle{fill:var(--chalk)}
 .chart line{stroke:var(--line);stroke-width:1}
+
+/* PR-merke */
+.pr{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:4px;background:var(--ok);color:#fff;
+  font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;vertical-align:middle}
+
+/* merker / achievements */
+.badge{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:1px solid var(--line);
+  background:var(--iron-2);margin-bottom:8px;opacity:.4}
+.badge.on{opacity:1;border-color:var(--ok)}
+.badge-ic{font-family:var(--display);font-size:22px;width:26px;text-align:center;color:var(--chalk-dim);flex-shrink:0}
+.badge.on .badge-ic{color:var(--ok)}
+.badge-name{font-family:var(--display);font-size:16px;text-transform:uppercase;letter-spacing:.02em;display:block}
+.badge-desc{font-size:12px;color:var(--chalk-dim);display:block;margin-top:2px}
 
 dialog{border:1px solid var(--line);background:var(--iron-2);color:var(--chalk);border-radius:12px;
   padding:18px;width:min(92vw,420px);max-height:86vh}
@@ -210,7 +223,7 @@ function seed(){
       {id:uid(),name:"Økt B",items:[it("Markløft",3,5),it("Skulderpress",3,8),it("Nedtrekk",3,10),it("Biceps curl",3,12)]},
       {id:uid(),name:"Økt C",items:[it("Beinpress",3,10),it("Rumensk markløft",3,8),it("Dips",3,8),it("Triceps pushdown",3,12)]}
     ]}],
-    sessions:[], active:null,
+    sessions:[], active:null, unlocked:[],
     settings:{rest:60,restEx:60,bar:20,sound:true}
   };
 }
@@ -221,8 +234,10 @@ async function load(){
   const raw=await Store.get();
   if(raw){ try{ const p=JSON.parse(raw); if(p&&p.exercises) S=Object.assign(seed(),p);}catch(e){} }
   S.settings=Object.assign({rest:60,restEx:60,bar:20,sound:true},S.settings||{});
+  S.unlocked=S.unlocked||[];
 }
 const exName=id=>{const e=S.exercises.find(x=>x.id===id);return e?e.name:"Ukjent øvelse"};
+const exNote=id=>{const e=S.exercises.find(x=>x.id===id);return e&&e.note?e.note:""};
 
 /* ---------- vektskiver ---------- */
 const PLATES=[[25,"p25"],[20,"p20"],[15,"p15"],[10,"p10"],[5,"p5"],[2.5,"p2"],[1.25,"p1"]];
@@ -254,10 +269,146 @@ function finishSession(){
   a.entries.forEach(e=>e.sets=e.sets.filter(s=>s.done));
   a.entries=a.entries.filter(e=>e.sets.length);
   a.endedAt=Date.now();
-  if(a.entries.length) S.sessions.push(a);
-  S.active=null; cd=null; running=null; stopRest(); save(); render();
+  const hadEntries=a.entries.length;
+  if(hadEntries) S.sessions.push(a);
+  S.active=null; cd=null; running=null; stopRest();
+  if(hadEntries) showFinishSummary(a);
+  save(); render();
 }
 function volume(s){return s.entries.reduce((t,e)=>t+e.sets.reduce((v,x)=>v+(+x.weight||0)*(+x.reps||0),0),0)}
+function allTimeBest(exId){
+  let best=0;
+  S.sessions.forEach(s=>{
+    const e=s.entries.find(x=>x.exerciseId===exId);
+    if(e) e.sets.forEach(st=>{ const w=+st.weight||0; if(w>best) best=w; });
+  });
+  return best;
+}
+
+/* ---------- merker ---------- */
+function tierAchievements(idPrefix,cat,names,descFn,icon,statKey,thresholds){
+  return thresholds.map((t,i)=>({id:idPrefix+i,cat,name:names[i],desc:descFn(t),icon,check:st=>st[statKey]>=t}));
+}
+const ACHIEVEMENTS=[
+  ...tierAchievements("sesh","Økter",
+    ["Første stål","Smigranitt","På skinner","Jernvilje","Fjellet","Steinhard","Uutslitelig","Uslåelig","Legende","Helt år"],
+    t=>`Fullfør ${t} økt${t===1?"":"er"}`,"①","sessions",[1,5,10,25,50,75,100,150,200,365]),
+  ...tierAchievements("vol","Volum",
+    ["Første tonn","Tonnasje","Stålverk","Jernbane","Smelteverk","Malmfjell","Gruvedrift","Meteorregn","Én million","To millioner"],
+    t=>`Løft ${t.toLocaleString("nb-NO")} kg totalt`,"▲","volume",[1000,5000,10000,25000,50000,100000,250000,500000,1000000,2000000]),
+  ...tierAchievements("pr","Rekorder",
+    ["Ny rekord","Rekordbryter","Rekordjeger","Umettelig","Rekordmaskin","Serieoppdaterer","Kronisk forbedring","Grenseløs","Rekordfabrikk","Uovertruffen"],
+    t=>`Sett ${t} personlige rekord${t===1?"":"er"}`,"★","prs",[1,3,5,10,15,25,40,60,90,130]),
+  ...tierAchievements("var","Variasjon",
+    ["Nybegynner","Allsidig","Mangfoldig","Fullstack","Spesialist","Ekspert","Encyklopedi","Øvelsesmester","Vandrende leksikon","Altetende"],
+    t=>`Logg ${t} forskjellige øvelser`,"◆","exVariety",[3,5,8,10,15,20,25,30,40,50]),
+  ...tierAchievements("big","Enkeltøkt",
+    ["God innsats","Solid","Rått","Beinhardt","Uutholdelig","Marathon","Krigsmaskin","Uslukkelig","Enmannshær","Legendarisk"],
+    t=>`Fullfør ${t} sett i én økt`,"■","maxSetsInSession",[10,15,20,25,30,40,50,60,80,100]),
+  ...tierAchievements("week","Konsistens",
+    ["Rutine","Vane","Fast innslag","Ukemester","Sesongform","Halvår","Helår i gang","Ett år","Halvannet år","To år"],
+    t=>`${t} uker på rad med minst én økt`,"▣","weekStreak",[2,4,8,12,20,30,40,52,78,104]),
+  ...tierAchievements("max","Tyngste løft",
+    ["Tunge tak","Solid singel","Trippel siffer","Stålnever","Jernhånd","Bøyd men ikke brutt","Massiv","Enorm","Grensesprengende","Overmenneskelig"],
+    t=>`Løft ${t} kg i ett sett`,"●","maxSingleSet",[60,80,100,120,140,160,180,200,250,300]),
+  ...tierAchievements("tot","Totalt sett",
+    ["Oppvarming","Går seg til","Rutinert","Sett-samler","Settmaskin","Repetisjonskonge","Settlegende","Ti tusen sett"],
+    t=>`Fullfør ${t.toLocaleString("nb-NO")} sett totalt`,"▮","totalSets",[50,100,250,500,1000,2000,5000,10000])
+];
+function weekStart(ts){
+  const d=new Date(ts); const day=(d.getDay()+6)%7;
+  d.setHours(0,0,0,0); d.setDate(d.getDate()-day);
+  return d.getTime();
+}
+function computeWeekStreak(){
+  const weeks=[...new Set(S.sessions.map(s=>weekStart(s.startedAt)))].sort((a,b)=>a-b);
+  if(!weeks.length) return 0;
+  let best=1,cur=1;
+  for(let i=1;i<weeks.length;i++){
+    const diff=Math.round((weeks[i]-weeks[i-1])/(7*86400000));
+    cur=diff===1?cur+1:1;
+    if(cur>best) best=cur;
+  }
+  return best;
+}
+function achievementStats(){
+  let volume=0, prs=0, maxSetsInSession=0, totalSets=0, maxSingleSet=0; const exSet=new Set();
+  S.sessions.forEach(s=>{
+    let setsInSession=0;
+    s.entries.forEach(e=>{
+      exSet.add(e.exerciseId);
+      e.sets.forEach(st=>{
+        const w=+st.weight||0;
+        volume+=w*(+st.reps||0);
+        setsInSession++; totalSets++;
+        if(w>maxSingleSet) maxSingleSet=w;
+        if(st.isPR) prs++;
+      });
+    });
+    if(setsInSession>maxSetsInSession) maxSetsInSession=setsInSession;
+  });
+  return {sessions:S.sessions.length, volume, prs, exVariety:exSet.size, maxSetsInSession, totalSets, maxSingleSet, weekStreak:computeWeekStreak()};
+}
+function checkNewAchievements(){
+  const st=achievementStats();
+  const newly=ACHIEVEMENTS.filter(a=>a.check(st)&&!S.unlocked.includes(a.id));
+  newly.forEach(a=>S.unlocked.push(a.id));
+  return newly;
+}
+function achievementsHTML(){
+  const st=achievementStats();
+  const unlockedCount=ACHIEVEMENTS.filter(a=>a.check(st)).length;
+  const cats=[...new Set(ACHIEVEMENTS.map(a=>a.cat))];
+  const body=cats.map(c=>{
+    const rows=ACHIEVEMENTS.filter(a=>a.cat===c).map(a=>{
+      const on=a.check(st);
+      return `<div class="badge ${on?"on":""}"><span class="badge-ic">${a.icon}</span>
+        <span><span class="badge-name">${esc(a.name)}</span><span class="badge-desc">${esc(a.desc)}</span></span></div>`;
+    }).join("");
+    return `<div class="tiny" style="margin:14px 0 8px">${esc(c)}</div>${rows}`;
+  }).join("");
+  return `<div class="card"><div class="tiny" style="margin-bottom:4px">Merker (${unlockedCount}/${ACHIEVEMENTS.length})</div>${body}</div>`;
+}
+
+/* ---------- tullete oppsummering ---------- */
+const FUN_UNITS=[
+  {kg:0.12,e:"banan",f:"bananer"},
+  {kg:0.5,e:"pose potetgull",f:"poser potetgull"},
+  {kg:5,e:"bowlingkule",f:"bowlingkuler"},
+  {kg:8,e:"kasse øl",f:"kasser øl"},
+  {kg:30,e:"gyllen retriever",f:"gyldne retrievere"},
+  {kg:70,e:"fullvoksen mann",f:"fullvoksne menn"},
+  {kg:200,e:"motorsykkel",f:"motorsykler"},
+  {kg:900,e:"Fiat 500",f:"Fiat 500-er"},
+  {kg:1300,e:"Volkswagen Golf",f:"Volkswagen Golfer"},
+  {kg:6000,e:"afrikansk elefant",f:"afrikanske elefanter"}
+];
+function funnyStat(kg){
+  if(!kg||kg<=0) return null;
+  const u=FUN_UNITS[Math.floor(Math.random()*FUN_UNITS.length)];
+  const n=Math.max(1,Math.round(kg/u.kg));
+  return `${n.toLocaleString("nb-NO")} ${n===1?u.e:u.f}`;
+}
+function showFinishSummary(s){
+  const kg=volume(s);
+  const mins=s.endedAt&&s.startedAt?Math.round((s.endedAt-s.startedAt)/60000):0;
+  const totalSets=s.entries.reduce((t,e)=>t+e.sets.length,0);
+  const fun=funnyStat(kg);
+  const newly=checkNewAchievements();
+  dlg(`<h2>Økt fullført!</h2>
+    <div class="card" style="margin-bottom:14px">
+      <div class="row" style="gap:20px">
+        <div><div class="tiny">Volum</div><div class="num" style="font-size:24px">${Math.round(kg).toLocaleString("nb-NO")} kg</div></div>
+        <div><div class="tiny">Tid</div><div class="num" style="font-size:24px">${mins} min</div></div>
+        <div><div class="tiny">Sett</div><div class="num" style="font-size:24px">${totalSets}</div></div>
+      </div>
+      ${fun?`<div class="small" style="margin-top:12px">I dag har du løftet ekvivalenten til <strong>${fun}</strong>.</div>`:""}
+    </div>
+    ${newly.length?`<div class="tiny" style="margin-bottom:8px">Nye merker</div>
+      ${newly.map(a=>`<div class="badge on"><span class="badge-ic">${a.icon}</span>
+        <span><span class="badge-name">${esc(a.name)}</span><span class="badge-desc">${esc(a.desc)}</span></span></div>`).join("")}`:""}
+    <button class="btn sm" data-act="close" style="margin-top:14px">Nice</button>`);
+}
 
 /* ---------- hviletimer ---------- */
 let restEnd=0,restTotal=0,restOn=false,AC=null;
@@ -355,9 +506,13 @@ function activeHTML(){
       <div class="restin" style="margin-top:12px"><span class="tiny">Hvile mellom øvelser</span>
       <input type="number" inputmode="numeric" min="0" step="15" value="${S.settings.restEx}" data-rex="1"><span class="tiny">sek</span></div></div>`;
   a.entries.forEach((e,ei)=>{
-    h+=`<div class="ex"><div class="ex-head"><span class="name">${esc(exName(e.exerciseId))}</span>
+    const top=e.sets.reduce((m,s)=>Math.max(m,+s.weight||0),0);
+    const isPR=top>0&&top>allTimeBest(e.exerciseId);
+    const note=exNote(e.exerciseId);
+    h+=`<div class="ex"><div class="ex-head"><span class="name">${esc(exName(e.exerciseId))}${isPR?'<span class="pr">Ny PR</span>':""}</span>
       <span class="restin"><span class="tiny">hvile</span>
       <input type="number" inputmode="numeric" min="0" step="15" value="${e.restSec}" data-rset="${ei}"><span class="tiny">sek</span></span></div>`;
+    if(note) h+=`<div class="hint" style="padding-top:8px;border-bottom:1px solid rgba(46,51,58,.5)">${esc(note)}</div>`;
     e.sets.forEach((s,si)=>{
       const isCd=cd&&cd.ei===ei&&cd.si===si, isRun=running&&running.ei===ei&&running.si===si;
       let cls="",lbl="Start",act="startset";
@@ -371,7 +526,6 @@ function activeHTML(){
         <button class="check ${cls}" data-btn="${ei}-${si}" data-act="${act}" data-e="${ei}" data-s="${si}">${lbl}</button>
       </div>`;
     });
-    const top=e.sets.reduce((m,s)=>Math.max(m,+s.weight||0),0);
     h+=plateHTML(top);
     h+=`<div class="ex-foot"><button data-act="addset" data-e="${ei}">+ Sett</button>
       <button data-act="delset" data-e="${ei}">− Sett</button>
@@ -413,8 +567,14 @@ function viewProg(){
   });
   h+=`<button class="btn" data-act="addprog">+ Nytt program</button>
       <div class="sep"></div>
-      <div class="tiny" style="margin-bottom:8px">Øvelser (${S.exercises.length})</div>
-      <button class="btn ghost sm" data-act="newex">+ Ny øvelse</button>`;
+      <div class="tiny" style="margin-bottom:8px">Øvelser (${S.exercises.length})</div>`;
+  S.exercises.forEach(ex=>{
+    h+=`<button class="item" data-act="editex" data-id="${ex.id}">
+      <span class="grow"><span class="name" style="font-size:16px">${esc(ex.name)}</span>
+      <div class="meta">${esc(ex.muscle||"")}${ex.note?" · "+esc(ex.note):""}</div></span>
+      <span class="chev">›</span></button>`;
+  });
+  h+=`<button class="btn ghost sm" data-act="newex">+ Ny øvelse</button>`;
   $("#v-prog").innerHTML=h;
 }
 
@@ -433,6 +593,8 @@ function viewLog(){
     <div><div class="tiny">Siste</div><div class="num" style="font-size:30px">${new Date(S.sessions[done-1].startedAt).toLocaleDateString("nb-NO",{day:"numeric",month:"short"})}</div></div>
   </div>`;
 
+  h+=achievementsHTML();
+
   const ids=[...new Set(S.sessions.flatMap(s=>s.entries.map(e=>e.exerciseId)))];
   if(!chartEx||!ids.includes(chartEx)) chartEx=ids[0];
   h+=`<div class="card"><div class="tiny" style="margin-bottom:8px">Progresjon — tyngste sett</div>
@@ -442,7 +604,8 @@ function viewLog(){
   h+=`<div class="tiny" style="margin:18px 0 10px">Historikk</div>`;
   [...S.sessions].reverse().forEach(s=>{
     const d=new Date(s.startedAt), min=s.endedAt?Math.round((s.endedAt-s.startedAt)/60000):0;
-    h+=`<div class="item"><span class="grow"><span class="name" style="font-size:17px">${esc(s.name)}</span>
+    const anyPR=s.entries.some(e=>e.sets.some(st=>st.isPR));
+    h+=`<div class="item" data-act="editsession" data-id="${s.id}"><span class="grow"><span class="name" style="font-size:17px">${esc(s.name)}${anyPR?'<span class="pr">PR</span>':""}</span>
       <div class="meta">${d.toLocaleDateString("nb-NO",{weekday:"short",day:"numeric",month:"short"})} · ${min} min · ${Math.round(volume(s)).toLocaleString("nb-NO")} kg
       <br>${s.entries.map(e=>`${exName(e.exerciseId)} ${e.sets.length}×`).join(" · ")}</div></span>
       <button class="iconbtn" data-act="delsession" data-id="${s.id}" aria-label="Slett økt">✕</button></div>`;
@@ -479,8 +642,17 @@ function dlgNewEx(){
   dlg(`<h2>Ny øvelse</h2>
     <label class="f"><span class="tiny">Navn</span><input type="text" id="nx-name" placeholder="F.eks. Frontbøy"></label>
     <label class="f"><span class="tiny">Muskelgruppe</span><input type="text" id="nx-m" placeholder="Bein"></label>
+    <label class="f"><span class="tiny">Notat (grep, teknikk o.l.)</span><input type="text" id="nx-note" placeholder="F.eks. bredt grep"></label>
     <div class="inline"><button class="btn ghost sm" data-act="close">Avbryt</button>
     <button class="btn sm" data-act="saveex">Lagre</button></div>`);
+}
+function dlgEditExercise(ex){
+  dlg(`<h2>${esc(ex.name)}</h2>
+    <label class="f"><span class="tiny">Navn</span><input type="text" id="ex-name" value="${esc(ex.name)}"></label>
+    <label class="f"><span class="tiny">Muskelgruppe</span><input type="text" id="ex-m" value="${esc(ex.muscle||"")}"></label>
+    <label class="f"><span class="tiny">Notat (grep, teknikk o.l.)</span><input type="text" id="ex-note" value="${esc(ex.note||"")}" placeholder="F.eks. bredt grep"></label>
+    <div class="inline"><button class="btn danger sm" data-act="delex" data-id="${ex.id}">Slett øvelse</button>
+    <button class="btn sm" data-act="saveexedit" data-id="${ex.id}">Lagre</button></div>`);
 }
 function dlgEditDay(p,d){
   dlg(`<h2>${esc(d.name)}</h2>
@@ -498,6 +670,21 @@ function dlgEditDay(p,d){
     <div class="inline"><button class="btn danger sm" data-act="delday">Slett økt</button>
     <button class="btn sm" data-act="saveday">Ferdig</button></div>`);
   $("#dlg").dataset.p=p.id; $("#dlg").dataset.d=d.id;
+}
+function dlgEditSession(s){
+  if(!s) return;
+  dlg(`<h2>${esc(s.name)}</h2>
+    <div class="tiny" style="margin-bottom:12px">${new Date(s.startedAt).toLocaleDateString("nb-NO",{weekday:"short",day:"numeric",month:"short"})}</div>
+    ${s.entries.map((e,ei)=>`<div class="tiny" style="margin:14px 0 6px">${esc(exName(e.exerciseId))}</div>
+      ${e.sets.map((st,si)=>`<div class="setrow" style="grid-template-columns:24px 1fr 1fr 34px;padding:6px 0">
+        <span class="idx">${si+1}</span>
+        <input type="number" step="1.25" value="${st.weight===""?"":st.weight}" data-se-e="${ei}" data-se-s="${si}" data-se-f="weight" aria-label="Vekt">
+        <input type="number" value="${st.reps===""?"":st.reps}" data-se-e="${ei}" data-se-s="${si}" data-se-f="reps" aria-label="Reps">
+        <button class="iconbtn" data-act="rmsetedit" data-se-e="${ei}" data-se-s="${si}">✕</button>
+      </div>`).join("")}`).join("")}
+    <div class="inline" style="margin-top:14px"><button class="btn danger sm" data-act="delsession" data-id="${s.id}">Slett økt</button>
+    <button class="btn sm" data-act="close">Ferdig</button></div>`);
+  $("#dlg").dataset.sid=s.id;
 }
 function dlgPickEx(){
   dlg(`<h2>Legg til øvelse</h2>
@@ -545,7 +732,9 @@ document.addEventListener("click",async ev=>{
   if(a==="doneset"){
     const ei=+b.dataset.e, si=+b.dataset.s;
     const e=S.active.entries[ei], s=e.sets[si];
+    const priorBest=allTimeBest(e.exerciseId);
     s.done=true; s.ts=Date.now();
+    if((+s.weight||0)>0&&(+s.weight||0)>priorBest) s.isPR=true;
     if(running&&running.ei===ei&&running.si===si){ s.durSec=Math.round((Date.now()-running.start)/1000); }
     running=null;
     const lastInEx=e.sets.every(x=>x.done);
@@ -555,7 +744,7 @@ document.addEventListener("click",async ev=>{
   }
   if(a==="undoset"){
     const e=S.active.entries[+b.dataset.e], s=e.sets[+b.dataset.s];
-    s.done=false; stopRest(); await save(); render(); return;
+    s.done=false; s.isPR=false; stopRest(); await save(); render(); return;
   }
   if(a==="addset"){ const e=S.active.entries[+b.dataset.e]; const l=e.sets[e.sets.length-1]||{weight:"",reps:""};
     e.sets.push({weight:l.weight,reps:l.reps,done:false}); await save(); render(); return; }
@@ -584,9 +773,38 @@ document.addEventListener("click",async ev=>{
     const p=S.programs.find(x=>x.id===$("#dlg").dataset.p); p.days=p.days.filter(x=>x.id!==$("#dlg").dataset.d);
     await save(); closeDlg(); render(); return; }
   if(a==="newex"){ dlgNewEx(); return; }
-  if(a==="saveex"){ const n=$("#nx-name").value.trim(); if(n){S.exercises.push({id:uid(),name:n,muscle:$("#nx-m").value.trim()});await save();}
+  if(a==="saveex"){ const n=$("#nx-name").value.trim(); if(n){S.exercises.push({id:uid(),name:n,muscle:$("#nx-m").value.trim(),note:$("#nx-note").value.trim()});await save();}
     closeDlg(); render(); return; }
-  if(a==="delsession"){ if(confirm("Slette denne økta fra loggen?")){ S.sessions=S.sessions.filter(s=>s.id!==b.dataset.id); await save(); render(); } return; }
+  if(a==="editex"){ const ex=S.exercises.find(x=>x.id===b.dataset.id); if(ex) dlgEditExercise(ex); return; }
+  if(a==="saveexedit"){
+    const ex=S.exercises.find(x=>x.id===b.dataset.id);
+    const n=$("#ex-name").value.trim();
+    if(ex&&n){ ex.name=n; ex.muscle=$("#ex-m").value.trim(); ex.note=$("#ex-note").value.trim(); await save(); }
+    closeDlg(); render(); return;
+  }
+  if(a==="delex"){
+    if(confirm("Slette denne øvelsen? Den fjernes fra alle programmer den brukes i.")){
+      const id=b.dataset.id;
+      S.exercises=S.exercises.filter(x=>x.id!==id);
+      S.programs.forEach(p=>p.days.forEach(d=>d.items=d.items.filter(i=>i.exerciseId!==id)));
+      if(S.active) S.active.entries=S.active.entries.filter(e=>e.exerciseId!==id);
+      await save(); closeDlg(); render();
+    }
+    return;
+  }
+  if(a==="editsession"){ dlgEditSession(S.sessions.find(x=>x.id===b.dataset.id)); return; }
+  if(a==="rmsetedit"){
+    const s=S.sessions.find(x=>x.id===$("#dlg").dataset.sid);
+    if(s){
+      const e=s.entries[+b.dataset.seE]; e.sets.splice(+b.dataset.seS,1);
+      if(!e.sets.length) s.entries.splice(+b.dataset.seE,1);
+      if(!s.entries.length){ S.sessions=S.sessions.filter(x=>x.id!==s.id); closeDlg(); }
+      else dlgEditSession(s);
+      await save();
+    }
+    render(); return;
+  }
+  if(a==="delsession"){ if(confirm("Slette denne økta fra loggen?")){ S.sessions=S.sessions.filter(s=>s.id!==b.dataset.id); await save(); closeDlg(); render(); } return; }
 
   if(a==="savesettings"){ S.settings.rest=+$("#st-rest").value||60; S.settings.restEx=+$("#st-restex").value||60; S.settings.bar=+$("#st-bar").value||20;
     S.settings.sound=$("#st-snd").checked; await save(); closeDlg(); render(); return; }
@@ -606,6 +824,11 @@ document.addEventListener("change",async ev=>{
     try{ const p=JSON.parse(txt); if(!p.exercises) throw 0; S=Object.assign(seed(),p); await save(); closeDlg(); render(); }
     catch(e){ alert("Filen ser ikke ut som en JERN-backup."); }
     return;
+  }
+  if(t.dataset.seE!==undefined&&t.dataset.seF){
+    const s=S.sessions.find(x=>x.id===$("#dlg").dataset.sid);
+    if(s) s.entries[+t.dataset.seE].sets[+t.dataset.seS][t.dataset.seF]=t.value===""?"":+t.value;
+    await save(); return;
   }
   if(t.dataset.di!==undefined&&t.dataset.df){
     const p=S.programs.find(x=>x.id===$("#dlg").dataset.p), d=p.days.find(x=>x.id===$("#dlg").dataset.d);
