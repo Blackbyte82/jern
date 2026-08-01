@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="nb">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover, maximum-scale=1">
+<meta name="theme-color" content="#111316">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="JERN">
+<title>JERN — treningslogg</title>
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="icon" href="favicon.png">
+<link rel="apple-touch-icon" href="apple-touch-icon.png">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --iron:#111316;
+  --iron-2:#191C21;
+  --iron-3:#22262C;
+  --line:#2E333A;
+  --chalk:#EDEAE3;
+  --chalk-dim:#8B9199;
+  --ok:#16A34A;
+  --warn:#C8102E;
+  --display:"Barlow Condensed", "Oswald", Impact, sans-serif;
+  --body:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+  --nav-h:60px;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;padding:0;background:var(--iron);color:var(--chalk);font-family:var(--body);overscroll-behavior-y:contain}
+body{padding-bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));font-size:15px;line-height:1.45}
+button,input,select{font-family:inherit;font-size:16px;color:inherit}
+button{cursor:pointer;border:none;background:none}
+:focus-visible{outline:2px solid var(--chalk);outline-offset:2px}
+h1,h2,h3{font-family:var(--display);text-transform:uppercase;letter-spacing:.04em;margin:0;font-weight:700;line-height:1}
+.num{font-family:var(--display);font-variant-numeric:tabular-nums;font-weight:600}
+
+/* header */
+header{position:sticky;top:0;z-index:30;background:var(--iron);border-bottom:1px solid var(--line);
+  padding:calc(env(safe-area-inset-top) + 12px) 16px 12px;display:flex;align-items:baseline;gap:10px}
+header h1{font-size:26px}
+header .sub{font-size:11px;letter-spacing:.22em;text-transform:uppercase;color:var(--chalk-dim);font-family:var(--display)}
+header .spacer{flex:1}
+.iconbtn{color:var(--chalk-dim);font-size:20px;padding:6px 8px;line-height:1}
+
+main{padding:16px 16px 24px;max-width:640px;margin:0 auto}
+.view{display:none}.view.on{display:block}
+
+/* generic */
+.card{background:var(--iron-2);border:1px solid var(--line);border-radius:10px;padding:14px;margin-bottom:12px}
+.row{display:flex;align-items:center;gap:10px}
+.muted{color:var(--chalk-dim)}
+.small{font-size:13px}
+.tiny{font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--chalk-dim);font-family:var(--display)}
+.btn{display:block;width:100%;padding:14px;border-radius:8px;background:var(--chalk);color:var(--iron);
+  font-family:var(--display);font-size:18px;font-weight:700;text-transform:uppercase;letter-spacing:.06em;text-align:center}
+.btn.ghost{background:transparent;border:1px solid var(--line);color:var(--chalk)}
+.btn.danger{background:transparent;border:1px solid var(--warn);color:#F08A99}
+.btn.sm{padding:9px;font-size:14px}
+.inline{display:flex;gap:8px}
+.inline>*{flex:1}
+input[type=text],input[type=number],select{width:100%;background:var(--iron-3);border:1px solid var(--line);
+  border-radius:7px;padding:11px;color:var(--chalk)}
+label.f{display:block;margin-bottom:10px}
+label.f .tiny{display:block;margin-bottom:4px}
+.empty{border:1px dashed var(--line);border-radius:10px;padding:26px 18px;text-align:center;color:var(--chalk-dim)}
+.empty strong{display:block;color:var(--chalk);font-family:var(--display);font-size:20px;text-transform:uppercase;margin-bottom:6px}
+
+/* list item */
+.item{display:flex;align-items:center;gap:12px;padding:13px 14px;background:var(--iron-2);border:1px solid var(--line);
+  border-radius:10px;margin-bottom:10px;width:100%;text-align:left}
+.item .grow{flex:1;min-width:0}
+.item .name{font-family:var(--display);font-size:19px;text-transform:uppercase;letter-spacing:.02em}
+.item .meta{font-size:12px;color:var(--chalk-dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.chev{color:var(--chalk-dim);font-size:18px}
+
+/* active session */
+.ex{background:var(--iron-2);border:1px solid var(--line);border-radius:10px;margin-bottom:12px;overflow:hidden}
+.ex-head{display:flex;align-items:center;gap:10px;padding:12px 14px;border-bottom:1px solid var(--line)}
+.ex-head .name{font-family:var(--display);font-size:20px;text-transform:uppercase;flex:1}
+.ex-head .target{font-size:12px;color:var(--chalk-dim);font-family:var(--display);letter-spacing:.08em}
+.setrow{display:grid;grid-template-columns:24px 1fr 1fr 82px;gap:8px;align-items:center;padding:8px 14px;border-bottom:1px solid rgba(46,51,58,.5)}
+.setrow:last-child{border-bottom:none}
+.setrow.done{background:rgba(237,234,227,.05)}
+.setrow.done .idx{color:var(--chalk)}
+.idx{font-family:var(--display);font-size:17px;color:var(--chalk-dim);text-align:center}
+.setrow input{padding:9px;text-align:center;font-family:var(--display);font-size:18px;font-weight:600}
+.check{width:82px;height:42px;border-radius:7px;border:1px solid var(--line);background:var(--iron-3);
+  display:flex;align-items:center;justify-content:center;font-family:var(--display);font-size:16px;
+  font-weight:700;text-transform:uppercase;letter-spacing:.06em;color:var(--chalk);font-variant-numeric:tabular-nums}
+.check.on{background:rgba(237,234,227,.12);color:var(--chalk);border-color:var(--line);font-size:19px}
+.check.cd{background:var(--warn);border-color:var(--warn);color:#fff;font-size:24px}
+.check.run{background:var(--chalk);color:var(--iron);border-color:var(--chalk);font-size:19px}
+.restin{display:flex;align-items:center;gap:6px}
+.restin input{width:58px;padding:6px;text-align:center;font-family:var(--display);font-size:16px;font-weight:600;
+  background:var(--iron-3);border:1px solid var(--line);border-radius:6px;color:var(--chalk)}
+.restin .tiny{white-space:nowrap}
+.ex-foot{display:flex;gap:8px;padding:10px 14px}
+.ex-foot button{flex:1;padding:9px;border:1px solid var(--line);border-radius:7px;font-family:var(--display);
+  font-size:14px;text-transform:uppercase;letter-spacing:.06em;color:var(--chalk-dim)}
+.hint{padding:4px 14px 10px;font-size:12px;color:var(--chalk-dim)}
+
+/* PLATES — the one place colour lives */
+.plates{display:flex;align-items:center;gap:3px;padding:2px 14px 10px;flex-wrap:wrap}
+.plates .lbl{font-family:var(--display);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--chalk-dim);margin-right:4px}
+.plate{width:11px;border-radius:2px;box-shadow:inset 0 0 0 1px rgba(0,0,0,.35)}
+.plate.p25{height:34px;background:#C8102E}
+.plate.p20{height:32px;background:#0B5CD5}
+.plate.p15{height:29px;background:#F2C200}
+.plate.p10{height:25px;background:#16A34A}
+.plate.p5{height:20px;background:#E8E6E1}
+.plate.p2{height:16px;background:#C8102E}
+.plate.p1{height:13px;background:#9AA3AD}
+
+/* rest timer */
+#rest{position:fixed;left:0;right:0;bottom:calc(var(--nav-h) + env(safe-area-inset-bottom));z-index:40;
+  background:var(--iron-3);border-top:1px solid var(--line);padding:10px 14px;display:none;align-items:center;gap:12px}
+#rest.on{display:flex}
+#rest .t{font-family:var(--display);font-size:34px;font-weight:700;min-width:86px;font-variant-numeric:tabular-nums}
+#rest .bar{position:absolute;left:0;top:0;height:2px;background:var(--chalk);transition:width .25s linear}
+#rest button{padding:8px 12px;border:1px solid var(--line);border-radius:7px;font-family:var(--display);
+  font-size:14px;text-transform:uppercase;letter-spacing:.06em}
+
+/* nav */
+nav{position:fixed;left:0;right:0;bottom:0;z-index:50;height:calc(var(--nav-h) + env(safe-area-inset-bottom));
+  padding-bottom:env(safe-area-inset-bottom);background:var(--iron);border-top:1px solid var(--line);display:flex}
+nav button{flex:1;font-family:var(--display);font-size:13px;letter-spacing:.14em;text-transform:uppercase;color:var(--chalk-dim);
+  display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;border-top:2px solid transparent;margin-top:-1px}
+nav button.on{color:var(--chalk);border-top-color:var(--chalk)}
+nav .dot{font-size:17px;line-height:1}
+
+/* chart */
+.chart{width:100%;height:150px;display:block}
+.chart polyline{fill:none;stroke:var(--chalk);stroke-width:2}
+.chart circle{fill:var(--chalk)}
+.chart line{stroke:var(--line);stroke-width:1}
+
+dialog{border:1px solid var(--line);background:var(--iron-2);color:var(--chalk);border-radius:12px;
+  padding:18px;width:min(92vw,420px);max-height:86vh}
+dialog::backdrop{background:rgba(0,0,0,.65)}
+dialog h2{font-size:22px;margin-bottom:14px}
+.sep{height:1px;background:var(--line);margin:16px 0}
+</style>
+</head>
+<body>
+
+<header>
+  <h1>Jern</h1><span class="sub">treningslogg</span>
+  <span class="spacer"></span>
+  <button class="iconbtn" id="openSettings" aria-label="Innstillinger">⚙</button>
+</header>
+
+<main>
+  <!-- TRENING -->
+  <section class="view on" id="v-train"></section>
+  <!-- PROGRAM -->
+  <section class="view" id="v-prog"></section>
+  <!-- LOGG -->
+  <section class="view" id="v-log"></section>
+</main>
+
+<div id="rest">
+  <div class="bar" id="restBar"></div>
+  <div><div class="tiny" id="restLbl">Hvile</div><div class="t num" id="restT">0:00</div></div>
+  <button data-rest="add">+15s</button>
+  <button data-rest="sub">−15s</button>
+  <button data-rest="skip">Hopp over</button>
+</div>
+
+<nav>
+  <button class="on" data-nav="train"><span class="dot">▲</span>Trening</button>
+  <button data-nav="prog"><span class="dot">▤</span>Program</button>
+  <button data-nav="log"><span class="dot">◴</span>Logg</button>
+</nav>
+
+<dialog id="dlg"><div id="dlgBody"></div></dialog>
+
+<script>
+"use strict";
+/* ---------- lagring: virker både i Claude og som vanlig nettside ---------- */
+const KEY="jern:state";
+const Store={
+  async get(){
+    if(window.storage&&window.storage.get){try{const r=await window.storage.get(KEY);return r?r.value:null}catch(e){return null}}
+    try{return localStorage.getItem(KEY)}catch(e){return null}
+  },
+  async set(v){
+    if(window.storage&&window.storage.set){try{await window.storage.set(KEY,v);return}catch(e){}}
+    try{localStorage.setItem(KEY,v)}catch(e){}
+  }
+};
+const uid=()=>Math.random().toString(36).slice(2,9);
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+
+/* ---------- start-data ---------- */
+function seed(){
+  const ex=(name,muscle)=>({id:uid(),name,muscle});
+  const E=[ex("Knebøy","Bein"),ex("Markløft","Rygg"),ex("Benkpress","Bryst"),ex("Stangroing","Rygg"),
+    ex("Skulderpress","Skulder"),ex("Nedtrekk","Rygg"),ex("Beinpress","Bein"),ex("Rumensk markløft","Bakside"),
+    ex("Dips","Bryst"),ex("Biceps curl","Arm"),ex("Triceps pushdown","Arm"),ex("Planke","Kjerne")];
+  const byName=n=>E.find(e=>e.name===n).id;
+  const it=(n,sets,reps)=>({exerciseId:byName(n),sets,reps,restSec:60});
+  return {
+    exercises:E,
+    programs:[{id:uid(),name:"Helkropp 3×",days:[
+      {id:uid(),name:"Økt A",items:[it("Knebøy",3,5),it("Benkpress",3,5),it("Stangroing",3,8),it("Planke",3,45)]},
+      {id:uid(),name:"Økt B",items:[it("Markløft",3,5),it("Skulderpress",3,8),it("Nedtrekk",3,10),it("Biceps curl",3,12)]},
+      {id:uid(),name:"Økt C",items:[it("Beinpress",3,10),it("Rumensk markløft",3,8),it("Dips",3,8),it("Triceps pushdown",3,12)]}
+    ]}],
+    sessions:[], active:null,
+    settings:{rest:60,restEx:60,bar:20,sound:true}
+  };
+}
+let S=seed(), tab="train", chartEx=null;
+
+async function save(){ await Store.set(JSON.stringify(S)); }
+async function load(){
+  const raw=await Store.get();
+  if(raw){ try{ const p=JSON.parse(raw); if(p&&p.exercises) S=Object.assign(seed(),p);}catch(e){} }
+  S.settings=Object.assign({rest:60,restEx:60,bar:20,sound:true},S.settings||{});
+}
+const exName=id=>{const e=S.exercises.find(x=>x.id===id);return e?e.name:"Ukjent øvelse"};
+
+/* ---------- vektskiver ---------- */
+const PLATES=[[25,"p25"],[20,"p20"],[15,"p15"],[10,"p10"],[5,"p5"],[2.5,"p2"],[1.25,"p1"]];
+function plateHTML(total){
+  const bar=S.settings.bar;
+  if(!total||total<=bar) return "";
+  let side=(total-bar)/2, out="";
+  for(const [w,c] of PLATES){ while(side>=w-0.001){ out+=`<span class="plate ${c}" title="${w} kg"></span>`; side-=w; } }
+  if(!out||side>0.01) return "";
+  return `<div class="plates"><span class="lbl">per side</span>${out}</div>`;
+}
+
+/* ---------- økt ---------- */
+function startSession(prog,day){
+  S.active={id:uid(),name:day?day.name:"Fri økt",programId:prog?prog.id:null,startedAt:Date.now(),
+    entries:(day?day.items:[]).map(i=>({exerciseId:i.exerciseId,restSec:i.restSec||S.settings.rest,
+      sets:Array.from({length:i.sets},()=>({weight:lastWeight(i.exerciseId),reps:i.reps,done:false}))}))};
+  save(); go("train");
+}
+function lastWeight(exId){
+  for(let i=S.sessions.length-1;i>=0;i--){
+    const e=S.sessions[i].entries.find(x=>x.exerciseId===exId);
+    if(e){const d=e.sets.filter(s=>s.done);if(d.length)return d[d.length-1].weight;}
+  }
+  return "";
+}
+function finishSession(){
+  const a=S.active; if(!a) return;
+  a.entries.forEach(e=>e.sets=e.sets.filter(s=>s.done));
+  a.entries=a.entries.filter(e=>e.sets.length);
+  a.endedAt=Date.now();
+  if(a.entries.length) S.sessions.push(a);
+  S.active=null; cd=null; running=null; stopRest(); save(); render();
+}
+function volume(s){return s.entries.reduce((t,e)=>t+e.sets.reduce((v,x)=>v+(+x.weight||0)*(+x.reps||0),0),0)}
+
+/* ---------- hviletimer ---------- */
+let restEnd=0,restTotal=0,restOn=false,AC=null;
+let cd=null;      // nedtelling før sett: {ei,si,end,last}
+let running=null; // sett som pågår: {ei,si,start}
+
+function beep(freq,dur,vol){
+  if(!S.settings.sound) return;
+  try{
+    AC=AC||new (window.AudioContext||window.webkitAudioContext)();
+    if(AC.state==="suspended") AC.resume();
+    const o=AC.createOscillator(),g=AC.createGain(),t=AC.currentTime;
+    o.frequency.value=freq;o.connect(g);g.connect(AC.destination);
+    g.gain.setValueAtTime(0.0001,t);
+    g.gain.exponentialRampToValueAtTime(vol||0.25,t+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,t+dur);
+    o.start(t);o.stop(t+dur+0.02);
+  }catch(e){}
+}
+function unlockAudio(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==="suspended")AC.resume(); }catch(e){} }
+
+function startCountdown(ei,si){
+  stopRest(); running=null;
+  unlockAudio();
+  cd={ei,si,end:Date.now()+5000,last:6};
+  render();
+}
+function startRest(sec,label){
+  restTotal=Math.max(1,sec); restEnd=Date.now()+restTotal*1000; restOn=true;
+  $("#restLbl").textContent=label||"Hvile";
+  $("#rest").classList.add("on"); paintRest();
+}
+function stopRest(){ restOn=false; $("#rest").classList.remove("on"); }
+function paintRest(){
+  const left=Math.max(0,Math.round((restEnd-Date.now())/1000));
+  $("#restT").textContent=Math.floor(left/60)+":"+String(left%60).padStart(2,"0");
+  $("#restBar").style.width=(restTotal?Math.max(0,left/restTotal*100):0)+"%";
+  return left;
+}
+function btnEl(ei,si){ return document.querySelector(`[data-btn="${ei}-${si}"]`); }
+
+setInterval(()=>{
+  if(cd){
+    const left=Math.ceil((cd.end-Date.now())/1000);
+    if(left<cd.last){ cd.last=left; if(left>0) beep(760,0.12); }
+    const el=btnEl(cd.ei,cd.si); if(el) el.textContent=left>0?left:"KJØR";
+    if(left<=0){
+      beep(1180,0.4,0.3);
+      if(navigator.vibrate) navigator.vibrate(120);
+      running={ei:cd.ei,si:cd.si,start:Date.now()}; cd=null; render();
+    }
+  }
+  if(running){
+    const el=btnEl(running.ei,running.si);
+    if(el){ const s=Math.floor((Date.now()-running.start)/1000);
+      el.textContent=Math.floor(s/60)+":"+String(s%60).padStart(2,"0"); }
+  }
+  if(restOn && paintRest()<=0){
+    stopRest();
+    if(navigator.vibrate) navigator.vibrate([220,110,220]);
+    beep(880,0.25); setTimeout(()=>beep(880,0.25),300);
+  }
+},200);
+
+/* ---------- visning: TRENING ---------- */
+function viewTrain(){
+  const el=$("#v-train");
+  if(S.active){ el.innerHTML=activeHTML(); return; }
+  if(!S.programs.length){
+    el.innerHTML=`<div class="empty"><strong>Ingen program ennå</strong>
+      Lag et program under Program, så starter du økta herfra.</div>
+      <button class="btn ghost" data-act="freeStart" style="margin-top:12px">Start fri økt</button>`;
+    return;
+  }
+  let h=`<h2 style="font-size:15px;color:var(--chalk-dim);margin-bottom:12px">Velg økt</h2>`;
+  S.programs.forEach(p=>{
+    h+=`<div class="tiny" style="margin:14px 0 8px">${esc(p.name)}</div>`;
+    p.days.forEach(d=>{
+      const n=d.items.length, sets=d.items.reduce((t,i)=>t+i.sets,0);
+      h+=`<button class="item" data-act="start" data-p="${p.id}" data-d="${d.id}">
+        <span class="grow"><span class="name">${esc(d.name)}</span>
+        <div class="meta">${n} øvelser · ${sets} sett · ${d.items.map(i=>exName(i.exerciseId)).join(", ")}</div></span>
+        <span class="chev">▶</span></button>`;
+    });
+  });
+  h+=`<button class="btn ghost sm" data-act="freeStart" style="margin-top:16px">Start fri økt</button>`;
+  el.innerHTML=h;
+}
+function activeHTML(){
+  const a=S.active, mins=Math.round((Date.now()-a.startedAt)/60000);
+  let h=`<div class="card"><div class="row"><div style="flex:1">
+      <div class="tiny">Pågår · ${mins} min</div>
+      <h2 style="font-size:24px;margin-top:2px">${esc(a.name)}</h2></div>
+      <button class="btn sm" data-act="finish" style="width:auto;padding:10px 14px">Fullfør</button></div>
+      <div class="restin" style="margin-top:12px"><span class="tiny">Hvile mellom øvelser</span>
+      <input type="number" inputmode="numeric" min="0" step="15" value="${S.settings.restEx}" data-rex="1"><span class="tiny">sek</span></div></div>`;
+  a.entries.forEach((e,ei)=>{
+    h+=`<div class="ex"><div class="ex-head"><span class="name">${esc(exName(e.exerciseId))}</span>
+      <span class="restin"><span class="tiny">hvile</span>
+      <input type="number" inputmode="numeric" min="0" step="15" value="${e.restSec}" data-rset="${ei}"><span class="tiny">sek</span></span></div>`;
+    e.sets.forEach((s,si)=>{
+      const isCd=cd&&cd.ei===ei&&cd.si===si, isRun=running&&running.ei===ei&&running.si===si;
+      let cls="",lbl="Start",act="startset";
+      if(s.done){cls="on";lbl="✓";act="undoset"}
+      else if(isCd){cls="cd";lbl="5";act="cancelset"}
+      else if(isRun){cls="run";lbl="0:00";act="doneset"}
+      h+=`<div class="setrow ${s.done?"done":""}">
+        <span class="idx">${si+1}</span>
+        <input type="number" inputmode="decimal" step="1.25" placeholder="kg" value="${s.weight===""?"":s.weight}" data-f="weight" data-e="${ei}" data-s="${si}">
+        <input type="number" inputmode="numeric" placeholder="reps" value="${s.reps===""?"":s.reps}" data-f="reps" data-e="${ei}" data-s="${si}">
+        <button class="check ${cls}" data-btn="${ei}-${si}" data-act="${act}" data-e="${ei}" data-s="${si}">${lbl}</button>
+      </div>`;
+    });
+    const top=e.sets.reduce((m,s)=>Math.max(m,+s.weight||0),0);
+    h+=plateHTML(top);
+    h+=`<div class="ex-foot"><button data-act="addset" data-e="${ei}">+ Sett</button>
+      <button data-act="delset" data-e="${ei}">− Sett</button>
+      <button data-act="rmex" data-e="${ei}">Fjern øvelse</button></div>`;
+    const prev=prevBest(e.exerciseId);
+    if(prev) h+=`<div class="hint">Forrige gang: ${prev}</div>`;
+    if(ei===0&&!e.sets.some(s=>s.done)) h+=`<div class="hint">Start teller ned fra 5. Trykk på knappen igjen når settet er ferdig — da går hviletimeren.</div>`;
+    h+=`</div>`;
+  });
+  h+=`<button class="btn ghost sm" data-act="addex" style="margin-bottom:10px">+ Legg til øvelse</button>
+      <button class="btn danger sm" data-act="cancel">Avbryt økt</button>`;
+  return h;
+}
+function prevBest(exId){
+  for(let i=S.sessions.length-1;i>=0;i--){
+    const e=S.sessions[i].entries.find(x=>x.exerciseId===exId);
+    if(e&&e.sets.length){
+      const b=e.sets.reduce((m,s)=>((+s.weight||0)>(+m.weight||0)?s:m),e.sets[0]);
+      return `${b.weight||0} kg × ${b.reps} (${new Date(S.sessions[i].startedAt).toLocaleDateString("nb-NO")})`;
+    }
+  }
+  return null;
+}
+
+/* ---------- visning: PROGRAM ---------- */
+function viewProg(){
+  let h=`<h2 style="font-size:15px;color:var(--chalk-dim);margin-bottom:12px">Programmer</h2>`;
+  if(!S.programs.length) h+=`<div class="empty"><strong>Tomt</strong>Lag ditt første program.</div>`;
+  S.programs.forEach(p=>{
+    h+=`<div class="card"><div class="row"><h2 style="flex:1;font-size:21px">${esc(p.name)}</h2>
+      <button class="iconbtn" data-act="delprog" data-p="${p.id}" aria-label="Slett program">✕</button></div>`;
+    p.days.forEach(d=>{
+      h+=`<button class="item" style="margin-top:10px" data-act="editday" data-p="${p.id}" data-d="${d.id}">
+        <span class="grow"><span class="name" style="font-size:17px">${esc(d.name)}</span>
+        <div class="meta">${d.items.length?d.items.map(i=>`${exName(i.exerciseId)} ${i.sets}×${i.reps}`).join(" · "):"Ingen øvelser"}</div></span>
+        <span class="chev">›</span></button>`;
+    });
+    h+=`<button class="btn ghost sm" style="margin-top:10px" data-act="addday" data-p="${p.id}">+ Ny økt</button></div>`;
+  });
+  h+=`<button class="btn" data-act="addprog">+ Nytt program</button>
+      <div class="sep"></div>
+      <div class="tiny" style="margin-bottom:8px">Øvelser (${S.exercises.length})</div>
+      <button class="btn ghost sm" data-act="newex">+ Ny øvelse</button>`;
+  $("#v-prog").innerHTML=h;
+}
+
+/* ---------- visning: LOGG ---------- */
+function viewLog(){
+  let h="";
+  if(!S.sessions.length){
+    h=`<div class="empty"><strong>Ingen økter logget</strong>Fullfør en økt, så dukker den opp her.</div>`;
+    $("#v-log").innerHTML=h; return;
+  }
+  const done=S.sessions.length;
+  const kg=S.sessions.reduce((t,s)=>t+volume(s),0);
+  h+=`<div class="card row" style="gap:20px">
+    <div><div class="tiny">Økter</div><div class="num" style="font-size:30px">${done}</div></div>
+    <div><div class="tiny">Totalt volum</div><div class="num" style="font-size:30px">${Math.round(kg).toLocaleString("nb-NO")}<span style="font-size:15px"> kg</span></div></div>
+    <div><div class="tiny">Siste</div><div class="num" style="font-size:30px">${new Date(S.sessions[done-1].startedAt).toLocaleDateString("nb-NO",{day:"numeric",month:"short"})}</div></div>
+  </div>`;
+
+  const ids=[...new Set(S.sessions.flatMap(s=>s.entries.map(e=>e.exerciseId)))];
+  if(!chartEx||!ids.includes(chartEx)) chartEx=ids[0];
+  h+=`<div class="card"><div class="tiny" style="margin-bottom:8px">Progresjon — tyngste sett</div>
+    <select id="chartSel">${ids.map(i=>`<option value="${i}" ${i===chartEx?"selected":""}>${esc(exName(i))}</option>`).join("")}</select>
+    ${chartHTML(chartEx)}</div>`;
+
+  h+=`<div class="tiny" style="margin:18px 0 10px">Historikk</div>`;
+  [...S.sessions].reverse().forEach(s=>{
+    const d=new Date(s.startedAt), min=s.endedAt?Math.round((s.endedAt-s.startedAt)/60000):0;
+    h+=`<div class="item"><span class="grow"><span class="name" style="font-size:17px">${esc(s.name)}</span>
+      <div class="meta">${d.toLocaleDateString("nb-NO",{weekday:"short",day:"numeric",month:"short"})} · ${min} min · ${Math.round(volume(s)).toLocaleString("nb-NO")} kg
+      <br>${s.entries.map(e=>`${exName(e.exerciseId)} ${e.sets.length}×`).join(" · ")}</div></span>
+      <button class="iconbtn" data-act="delsession" data-id="${s.id}" aria-label="Slett økt">✕</button></div>`;
+  });
+  $("#v-log").innerHTML=h;
+}
+function chartHTML(exId){
+  const pts=[];
+  S.sessions.forEach(s=>{
+    const e=s.entries.find(x=>x.exerciseId===exId); if(!e) return;
+    const top=e.sets.reduce((m,x)=>Math.max(m,+x.weight||0),0);
+    if(top>0) pts.push({t:s.startedAt,v:top});
+  });
+  if(pts.length<2) return `<div class="small muted" style="padding:16px 0">Trenger minst to økter med denne øvelsen for å tegne graf.</div>`;
+  const W=320,H=150,P=22;
+  const min=Math.min(...pts.map(p=>p.v)), max=Math.max(...pts.map(p=>p.v)), span=(max-min)||1;
+  const X=i=>P+i*(W-P*2)/(pts.length-1);
+  const Y=v=>H-P-((v-min)/span)*(H-P*2);
+  const poly=pts.map((p,i)=>`${X(i).toFixed(1)},${Y(p.v).toFixed(1)}`).join(" ");
+  return `<svg class="chart" viewBox="0 0 ${W} ${H}" preserveAspectRatio="none" role="img" aria-label="Progresjon">
+    <line x1="${P}" y1="${H-P}" x2="${W-P}" y2="${H-P}"/>
+    <polyline points="${poly}"/>
+    ${pts.map((p,i)=>`<circle cx="${X(i).toFixed(1)}" cy="${Y(p.v).toFixed(1)}" r="3"/>`).join("")}
+    <text x="${P}" y="14" fill="#8B9199" font-size="11" font-family="sans-serif">${max} kg</text>
+    <text x="${P}" y="${H-6}" fill="#8B9199" font-size="11" font-family="sans-serif">${min} kg</text>
+  </svg>`;
+}
+
+/* ---------- dialoger ---------- */
+function dlg(html){ $("#dlgBody").innerHTML=html; $("#dlg").showModal(); }
+function closeDlg(){ $("#dlg").close(); }
+
+function dlgNewEx(){
+  dlg(`<h2>Ny øvelse</h2>
+    <label class="f"><span class="tiny">Navn</span><input type="text" id="nx-name" placeholder="F.eks. Frontbøy"></label>
+    <label class="f"><span class="tiny">Muskelgruppe</span><input type="text" id="nx-m" placeholder="Bein"></label>
+    <div class="inline"><button class="btn ghost sm" data-act="close">Avbryt</button>
+    <button class="btn sm" data-act="saveex">Lagre</button></div>`);
+}
+function dlgEditDay(p,d){
+  dlg(`<h2>${esc(d.name)}</h2>
+    <label class="f"><span class="tiny">Navn på økt</span><input type="text" id="dy-name" value="${esc(d.name)}"></label>
+    <div class="tiny" style="margin-bottom:8px">Øvelser</div>
+    ${d.items.length?d.items.map((i,ix)=>`<div class="setrow" style="grid-template-columns:1fr 52px 52px 34px;padding:6px 0">
+        <span class="small">${esc(exName(i.exerciseId))}</span>
+        <input type="number" value="${i.sets}" data-di="${ix}" data-df="sets" aria-label="Sett">
+        <input type="number" value="${i.reps}" data-di="${ix}" data-df="reps" aria-label="Reps">
+        <button class="iconbtn" data-act="rmitem" data-di="${ix}">✕</button></div>`).join(""):`<div class="small muted">Ingen øvelser ennå.</div>`}
+    <div class="sep"></div>
+    <label class="f"><span class="tiny">Legg til øvelse</span>
+      <select id="dy-add"><option value="">Velg …</option>${S.exercises.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("")}</select></label>
+    <button class="btn ghost sm" data-act="additem" style="margin-bottom:12px">Legg til</button>
+    <div class="inline"><button class="btn danger sm" data-act="delday">Slett økt</button>
+    <button class="btn sm" data-act="saveday">Ferdig</button></div>`);
+  $("#dlg").dataset.p=p.id; $("#dlg").dataset.d=d.id;
+}
+function dlgPickEx(){
+  dlg(`<h2>Legg til øvelse</h2>
+    <label class="f"><select id="pk"><option value="">Velg …</option>
+      ${S.exercises.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("")}</select></label>
+    <div class="inline"><button class="btn ghost sm" data-act="close">Avbryt</button>
+    <button class="btn sm" data-act="pickex">Legg til</button></div>`);
+}
+function dlgSettings(){
+  const s=S.settings;
+  dlg(`<h2>Innstillinger</h2>
+    <label class="f"><span class="tiny">Standard hvile mellom sett (sekunder)</span><input type="number" id="st-rest" step="15" value="${s.rest}"></label>
+    <label class="f"><span class="tiny">Hvile mellom øvelser (sekunder)</span><input type="number" id="st-restex" step="15" value="${s.restEx}"></label>
+    <label class="f"><span class="tiny">Stangvekt (kg)</span><input type="number" id="st-bar" step="0.5" value="${s.bar}"></label>
+    <label class="f row" style="gap:10px"><input type="checkbox" id="st-snd" ${s.sound?"checked":""} style="width:auto"><span class="small">Lyd når hvilen er ferdig</span></label>
+    <div class="sep"></div>
+    <div class="inline" style="margin-bottom:10px"><button class="btn ghost sm" data-act="export">Eksporter data</button>
+    <button class="btn ghost sm" data-act="importBtn">Importer</button></div>
+    <input type="file" id="impFile" accept="application/json" style="display:none">
+    <div class="inline"><button class="btn ghost sm" data-act="close">Lukk</button>
+    <button class="btn sm" data-act="savesettings">Lagre</button></div>`);
+}
+
+/* ---------- hendelser ---------- */
+document.addEventListener("click",async ev=>{
+  const nav=ev.target.closest("[data-nav]");
+  if(nav){ go(nav.dataset.nav); return; }
+  const r=ev.target.closest("[data-rest]");
+  if(r){
+    const k=r.dataset.rest;
+    if(k==="skip") stopRest();
+    else { restEnd+=(k==="add"?15000:-15000); restTotal+=(k==="add"?15:-15); paintRest(); }
+    return;
+  }
+  const b=ev.target.closest("[data-act]"); if(!b) return;
+  const a=b.dataset.act;
+
+  if(a==="start"){
+    const p=S.programs.find(x=>x.id===b.dataset.p);
+    startSession(p,p.days.find(x=>x.id===b.dataset.d)); return;
+  }
+  if(a==="freeStart"){ startSession(null,null); render(); return; }
+  if(a==="startset"){ startCountdown(+b.dataset.e,+b.dataset.s); return; }
+  if(a==="cancelset"){ cd=null; render(); return; }
+  if(a==="doneset"){
+    const ei=+b.dataset.e, si=+b.dataset.s;
+    const e=S.active.entries[ei], s=e.sets[si];
+    s.done=true; s.ts=Date.now();
+    if(running&&running.ei===ei&&running.si===si){ s.durSec=Math.round((Date.now()-running.start)/1000); }
+    running=null;
+    const lastInEx=e.sets.every(x=>x.done);
+    startRest(lastInEx?(S.settings.restEx||60):(e.restSec||S.settings.rest),
+              lastInEx?"Hvile før neste øvelse":"Hvile mellom sett");
+    await save(); render(); return;
+  }
+  if(a==="undoset"){
+    const e=S.active.entries[+b.dataset.e], s=e.sets[+b.dataset.s];
+    s.done=false; stopRest(); await save(); render(); return;
+  }
+  if(a==="addset"){ const e=S.active.entries[+b.dataset.e]; const l=e.sets[e.sets.length-1]||{weight:"",reps:""};
+    e.sets.push({weight:l.weight,reps:l.reps,done:false}); await save(); render(); return; }
+  if(a==="delset"){ const e=S.active.entries[+b.dataset.e]; if(e.sets.length>1)e.sets.pop(); await save(); render(); return; }
+  if(a==="rmex"){ S.active.entries.splice(+b.dataset.e,1); await save(); render(); return; }
+  if(a==="addex"){ dlgPickEx(); return; }
+  if(a==="pickex"){ const id=$("#pk").value; if(id){
+      S.active.entries.push({exerciseId:id,restSec:S.settings.rest,sets:[{weight:lastWeight(id),reps:8,done:false}]});
+      await save(); } closeDlg(); render(); return; }
+  if(a==="finish"){ finishSession(); go("log"); return; }
+  if(a==="cancel"){ if(confirm("Avbryt økta? Alt du har logget forsvinner.")){ S.active=null; cd=null; running=null; stopRest(); await save(); render(); } return; }
+
+  if(a==="addprog"){ const n=prompt("Navn på program:"); if(n){S.programs.push({id:uid(),name:n,days:[]});await save();render();} return; }
+  if(a==="delprog"){ if(confirm("Slette programmet?")){ S.programs=S.programs.filter(p=>p.id!==b.dataset.p); await save(); render(); } return; }
+  if(a==="addday"){ const p=S.programs.find(x=>x.id===b.dataset.p); const n=prompt("Navn på økt:","Økt "+(p.days.length+1));
+    if(n){p.days.push({id:uid(),name:n,items:[]});await save();render();} return; }
+  if(a==="editday"){ const p=S.programs.find(x=>x.id===b.dataset.p); dlgEditDay(p,p.days.find(x=>x.id===b.dataset.d)); return; }
+  if(a==="additem"){ const id=$("#dy-add").value; if(!id) return;
+    const p=S.programs.find(x=>x.id===$("#dlg").dataset.p), d=p.days.find(x=>x.id===$("#dlg").dataset.d);
+    d.items.push({exerciseId:id,sets:3,reps:8,restSec:S.settings.rest}); await save(); dlgEditDay(p,d); render(); return; }
+  if(a==="rmitem"){ const p=S.programs.find(x=>x.id===$("#dlg").dataset.p), d=p.days.find(x=>x.id===$("#dlg").dataset.d);
+    d.items.splice(+b.dataset.di,1); await save(); dlgEditDay(p,d); render(); return; }
+  if(a==="saveday"){ const p=S.programs.find(x=>x.id===$("#dlg").dataset.p), d=p.days.find(x=>x.id===$("#dlg").dataset.d);
+    const n=$("#dy-name").value.trim(); if(n) d.name=n; await save(); closeDlg(); render(); return; }
+  if(a==="delday"){ if(!confirm("Slette økta fra programmet?")) return;
+    const p=S.programs.find(x=>x.id===$("#dlg").dataset.p); p.days=p.days.filter(x=>x.id!==$("#dlg").dataset.d);
+    await save(); closeDlg(); render(); return; }
+  if(a==="newex"){ dlgNewEx(); return; }
+  if(a==="saveex"){ const n=$("#nx-name").value.trim(); if(n){S.exercises.push({id:uid(),name:n,muscle:$("#nx-m").value.trim()});await save();}
+    closeDlg(); render(); return; }
+  if(a==="delsession"){ if(confirm("Slette denne økta fra loggen?")){ S.sessions=S.sessions.filter(s=>s.id!==b.dataset.id); await save(); render(); } return; }
+
+  if(a==="savesettings"){ S.settings.rest=+$("#st-rest").value||60; S.settings.restEx=+$("#st-restex").value||60; S.settings.bar=+$("#st-bar").value||20;
+    S.settings.sound=$("#st-snd").checked; await save(); closeDlg(); render(); return; }
+  if(a==="export"){ const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+    const u=URL.createObjectURL(blob), l=document.createElement("a");
+    l.href=u; l.download="jern-backup-"+new Date().toISOString().slice(0,10)+".json"; l.click();
+    setTimeout(()=>URL.revokeObjectURL(u),2000); return; }
+  if(a==="importBtn"){ $("#impFile").click(); return; }
+  if(a==="close"){ closeDlg(); return; }
+});
+
+document.addEventListener("change",async ev=>{
+  const t=ev.target;
+  if(t.id==="chartSel"){ chartEx=t.value; render(); return; }
+  if(t.id==="impFile"&&t.files[0]){
+    const txt=await t.files[0].text();
+    try{ const p=JSON.parse(txt); if(!p.exercises) throw 0; S=Object.assign(seed(),p); await save(); closeDlg(); render(); }
+    catch(e){ alert("Filen ser ikke ut som en JERN-backup."); }
+    return;
+  }
+  if(t.dataset.di!==undefined&&t.dataset.df){
+    const p=S.programs.find(x=>x.id===$("#dlg").dataset.p), d=p.days.find(x=>x.id===$("#dlg").dataset.d);
+    d.items[+t.dataset.di][t.dataset.df]=+t.value||1; await save(); return;
+  }
+});
+document.addEventListener("input",ev=>{
+  const t=ev.target;
+  if(t.dataset.rex!==undefined){
+    S.settings.restEx=Math.max(0,+t.value||0);
+    if(restOn&&$("#restLbl").textContent.indexOf("øvelse")>-1) startRest(S.settings.restEx,"Hvile før neste øvelse");
+    clearTimeout(window._sv); window._sv=setTimeout(save,400); return;
+  }
+  if(t.dataset.rset!==undefined&&S.active){
+    const e=S.active.entries[+t.dataset.rset]; e.restSec=Math.max(0,+t.value||0);
+    if(restOn&&$("#restLbl").textContent.indexOf("sett")>-1) startRest(e.restSec,"Hvile mellom sett");
+    clearTimeout(window._sv); window._sv=setTimeout(save,400); return;
+  }
+  if(t.dataset.f&&S.active){
+    const s=S.active.entries[+t.dataset.e].sets[+t.dataset.s];
+    s[t.dataset.f]=t.value===""?"":+t.value;
+    clearTimeout(window._sv); window._sv=setTimeout(save,400);
+  }
+});
+$("#openSettings").addEventListener("click",dlgSettings);
+$("#dlg").addEventListener("close",render);
+
+/* ---------- hold skjermen våken under økt ---------- */
+let wl=null;
+async function wakeOn(){
+  if(!("wakeLock" in navigator)||wl) return;
+  try{ wl=await navigator.wakeLock.request("screen"); wl.addEventListener("release",()=>{wl=null}); }catch(e){}
+}
+async function wakeOff(){ if(wl){ try{await wl.release()}catch(e){} wl=null; } }
+document.addEventListener("visibilitychange",()=>{
+  if(document.visibilityState==="visible"&&S.active) wakeOn();
+  if(restOn) paintRest();
+});
+
+/* ---------- render ---------- */
+function go(t){ tab=t; document.querySelectorAll("nav button").forEach(b=>b.classList.toggle("on",b.dataset.nav===t)); render(); window.scrollTo(0,0); }
+function render(){
+  document.querySelectorAll(".view").forEach(v=>v.classList.remove("on"));
+  $("#v-"+tab).classList.add("on");
+  if(tab==="train") viewTrain(); else if(tab==="prog") viewProg(); else viewLog();
+  if(S.active) wakeOn(); else wakeOff();
+}
+load().then(()=>{ if(S.active) tab="train"; render(); });
+
+if("serviceWorker" in navigator){
+  window.addEventListener("load",()=>navigator.serviceWorker.register("sw.js").catch(()=>{}));
+}
+</script>
+</body>
+</html>
