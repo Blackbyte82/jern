@@ -61,9 +61,14 @@ main{padding:16px 16px 24px;max-width:640px;margin:0 auto}
 .btn.sm{padding:9px;font-size:14px}
 .inline{display:flex;gap:8px}
 .inline>*{flex:1}
-input[type=text],input[type=number],input[type=color],select{width:100%;background:var(--iron-3);border:1px solid var(--line);
+input[type=text],input[type=number],input[type=color],select,textarea{width:100%;background:var(--iron-3);border:1px solid var(--line);
   border-radius:7px;padding:11px;color:var(--chalk)}
 input[type=color]{height:44px;padding:4px;cursor:pointer}
+textarea{resize:vertical;min-height:64px;font-size:14px;line-height:1.4}
+.pickerlist{max-height:230px;overflow-y:auto;margin-top:8px}
+.pickerlist button{display:block;width:100%;text-align:left;padding:10px 12px;border:1px solid var(--line);border-radius:7px;
+  margin-bottom:6px;background:var(--iron-3);color:var(--chalk);font-size:15px}
+.pickerlist button.create{border-style:dashed;color:var(--ok)}
 label.f{display:block;margin-bottom:10px}
 label.f .tiny{display:block;margin-bottom:4px}
 .empty{border:1px dashed var(--line);border-radius:10px;padding:26px 18px;text-align:center;color:var(--chalk-dim)}
@@ -146,7 +151,16 @@ nav .dot{font-size:17px;line-height:1}
 /* PR-merke */
 .pr{display:inline-block;margin-left:8px;padding:2px 7px;border-radius:4px;background:var(--ok);color:#06210a;
   font-family:var(--display);font-size:11px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;vertical-align:middle;
-  box-shadow:0 0 6px 1px var(--ok),0 0 14px 2px color-mix(in srgb,var(--ok) 60%,transparent)}
+  box-shadow:0 0 6px 1px var(--ok),0 0 14px 2px color-mix(in srgb,var(--ok) 60%,transparent);
+  animation:prpulse 1.8s ease-in-out infinite}
+@keyframes prpulse{0%,100%{box-shadow:0 0 6px 1px var(--ok)}50%{box-shadow:0 0 18px 4px var(--ok)}}
+
+/* opplåsings-effekter */
+@keyframes badgepop{0%{transform:scale(.5);opacity:0}70%{transform:scale(1.08);opacity:1}100%{transform:scale(1);opacity:1}}
+.badge.pop{opacity:0;animation:badgepop .55s cubic-bezier(.2,1.4,.4,1) forwards}
+.confetti{position:absolute;inset:0;pointer-events:none;overflow:hidden}
+.confetti i{position:absolute;top:-14px;width:8px;height:14px;border-radius:2px;opacity:0;animation:cfall linear forwards}
+@keyframes cfall{0%{opacity:1;transform:translateY(0) rotate(0)}85%{opacity:1}100%{opacity:0;transform:translateY(560px) rotate(680deg)}}
 
 /* merker / achievements */
 .badge{display:flex;align-items:center;gap:12px;padding:12px 14px;border-radius:10px;border:1px solid var(--line);
@@ -233,10 +247,10 @@ function seed(){
       {id:uid(),name:"Økt C",items:[it("Beinpress",3,10),it("Rumensk markløft",3,8),it("Dips",3,8),it("Triceps pushdown",3,12)]}
     ]}],
     sessions:[], active:null, unlocked:[],
-    settings:{rest:60,restEx:60,bar:20,sound:true,notify:false,accent:"#39FF14",unit:"kg",font:"barlow",fontSize:"normal"}
+    settings:{rest:60,restEx:60,bar:20,sound:true,notify:false,accent:"#39FF14",unit:"kg",font:"barlow",fontSize:"normal",autoBackup:true}
   };
 }
-const DEFAULT_SETTINGS={rest:60,restEx:60,bar:20,sound:true,notify:false,accent:"#39FF14",unit:"kg",font:"barlow",fontSize:"normal"};
+const DEFAULT_SETTINGS={rest:60,restEx:60,bar:20,sound:true,notify:false,accent:"#39FF14",unit:"kg",font:"barlow",fontSize:"normal",autoBackup:true};
 const FONT_STACKS={
   barlow:'"Barlow Condensed","Oswald",Impact,sans-serif',
   oswald:'"Oswald","Barlow Condensed",Impact,sans-serif',
@@ -257,10 +271,13 @@ async function load(){
   if(raw){ try{ const p=JSON.parse(raw); if(p&&p.exercises) S=Object.assign(seed(),p);}catch(e){} }
   S.settings=Object.assign({},DEFAULT_SETTINGS,S.settings||{});
   S.unlocked=S.unlocked||[];
+  const st0=achievementStats();
+  ACHIEVEMENTS.forEach(a=>{ if(a.check(st0)&&!S.unlocked.includes(a.id)) S.unlocked.push(a.id); });
   applyTheme();
 }
 const exName=id=>{const e=S.exercises.find(x=>x.id===id);return e?e.name:"Ukjent øvelse"};
 const exNote=id=>{const e=S.exercises.find(x=>x.id===id);return e&&e.note?e.note:""};
+const exInstr=id=>{const e=S.exercises.find(x=>x.id===id);return e&&e.instructions?e.instructions:""};
 const isCardio=id=>{const e=S.exercises.find(x=>x.id===id);return !!(e&&e.type==="cardio")};
 const KG_PER_LB=0.45359237;
 const dispW=kg=>{const v=S.settings.unit==="lb"?(+kg||0)/KG_PER_LB:(+kg||0);return Math.round(v*100)/100};
@@ -281,7 +298,7 @@ function plateHTML(total){
 /* ---------- økt ---------- */
 function startSession(prog,day){
   S.active={id:uid(),name:day?day.name:"Fri økt",programId:prog?prog.id:null,startedAt:Date.now(),
-    entries:(day?day.items:[]).map(i=>({exerciseId:i.exerciseId,restSec:i.restSec||S.settings.rest,
+    entries:(day?day.items:[]).map(i=>({exerciseId:i.exerciseId,restSec:i.restSec||S.settings.rest,targetReps:i.reps||0,
       sets: isCardio(i.exerciseId)
         ? Array.from({length:i.sets||1},()=>({distanceKm:"",durationMin:"",done:false}))
         : Array.from({length:i.sets},()=>({weight:lastWeight(i.exerciseId),reps:i.reps,done:false}))}))};
@@ -301,12 +318,21 @@ function suggestedWeight(exId){
       const work=e.sets.filter(s=>!s.warmup&&(+s.weight||0)>0);
       if(work.length){
         const top=work.reduce((m,s)=>((+s.weight)>(+m.weight)?s:m),work[0]);
+        const target=+e.targetReps||0;
+        const hitAll=target>0&&work.every(s=>(+s.reps||0)>=target);
+        if(!hitAll) return {w:+top.weight,up:false};
         const inc=S.settings.unit==="lb"?5*KG_PER_LB:2.5;
-        return +top.weight+inc;
+        return {w:+top.weight+inc,up:true};
       }
     }
   }
   return null;
+}
+function downloadBackup(){
+  const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
+  const u=URL.createObjectURL(blob), l=document.createElement("a");
+  l.href=u; l.download="jern-backup-"+new Date().toISOString().slice(0,10)+".json"; l.click();
+  setTimeout(()=>URL.revokeObjectURL(u),2000);
 }
 function finishSession(){
   const a=S.active; if(!a) return;
@@ -315,9 +341,10 @@ function finishSession(){
   a.endedAt=Date.now();
   const hadEntries=a.entries.length;
   if(hadEntries) S.sessions.push(a);
-  S.active=null; cd=null; running=null; stopRest();
+  S.active=null; cd=null; running=null; nextUp=null; stopRest();
   if(hadEntries) showFinishSummary(a);
   save(); render();
+  if(hadEntries&&S.settings.autoBackup) downloadBackup();
 }
 function volume(s){return s.entries.reduce((t,e)=>t+e.sets.reduce((v,x)=>v+(x.warmup?0:(+x.weight||0)*(+x.reps||0)),0),0)}
 function allTimeBest(exId){
@@ -408,12 +435,11 @@ function checkNewAchievements(){
   return newly;
 }
 function achievementsHTML(){
-  const st=achievementStats();
-  const unlockedCount=ACHIEVEMENTS.filter(a=>a.check(st)).length;
+  const unlockedCount=ACHIEVEMENTS.filter(a=>S.unlocked.includes(a.id)).length;
   const cats=[...new Set(ACHIEVEMENTS.map(a=>a.cat))];
   const body=cats.map(c=>{
     const rows=ACHIEVEMENTS.filter(a=>a.cat===c).map(a=>{
-      const on=a.check(st);
+      const on=S.unlocked.includes(a.id);
       return `<div class="badge ${on?"on":""}"><span class="badge-ic">${a.icon}</span>
         <span><span class="badge-name">${esc(a.name)}</span><span class="badge-desc">${esc(a.desc)}</span></span></div>`;
     }).join("");
@@ -447,7 +473,10 @@ function showFinishSummary(s){
   const totalSets=s.entries.reduce((t,e)=>t+e.sets.length,0);
   const fun=funnyStat(kg);
   const newly=checkNewAchievements();
-  dlg(`<h2>Økt fullført!</h2>
+  const CONF=["#C8102E","#0B5CD5","#F2C200","#E8E6E1",S.settings.accent];
+  const confetti=newly.length?`<div class="confetti">${Array.from({length:30},()=>
+    `<i style="left:${(Math.random()*100).toFixed(1)}%;background:${CONF[Math.floor(Math.random()*CONF.length)]};animation-delay:${(Math.random()*0.9).toFixed(2)}s;animation-duration:${(1.6+Math.random()*1.6).toFixed(2)}s"></i>`).join("")}</div>`:"";
+  dlg(`${confetti}<h2>Økt fullført!</h2>
     <div class="card" style="margin-bottom:14px">
       <div class="row" style="gap:20px">
         <div><div class="tiny">Volum</div><div class="num" style="font-size:24px">${Math.round(kg).toLocaleString("nb-NO")} kg</div></div>
@@ -457,7 +486,7 @@ function showFinishSummary(s){
       ${fun?`<div class="small" style="margin-top:12px">I dag har du løftet ekvivalenten til <strong>${fun}</strong>.</div>`:""}
     </div>
     ${newly.length?`<div class="tiny" style="margin-bottom:8px">Nye merker</div>
-      ${newly.map(a=>`<div class="badge on"><span class="badge-ic">${a.icon}</span>
+      ${newly.map((a,i)=>`<div class="badge on pop" style="animation-delay:${(0.15+i*0.3).toFixed(2)}s"><span class="badge-ic">${a.icon}</span>
         <span><span class="badge-name">${esc(a.name)}</span><span class="badge-desc">${esc(a.desc)}</span></span></div>`).join("")}`:""}
     <button class="btn sm" data-act="close" style="margin-top:14px">Nice</button>`);
 }
@@ -466,6 +495,7 @@ function showFinishSummary(s){
 let restEnd=0,restTotal=0,restOn=false,AC=null;
 let cd=null;      // nedtelling før sett: {ei,si,end,last}
 let running=null; // sett som pågår: {ei,si,start}
+let nextUp=null;  // sett som auto-startes når hvilen mellom sett er over: {ei,si}
 
 function beep(freq,dur,vol){
   if(!S.settings.sound) return;
@@ -483,7 +513,7 @@ function beep(freq,dur,vol){
 function unlockAudio(){ try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); if(AC.state==="suspended")AC.resume(); }catch(e){} }
 
 function startCountdown(ei,si){
-  stopRest(); running=null;
+  stopRest(); running=null; nextUp=null;
   unlockAudio();
   cd={ei,si,end:Date.now()+5000,last:6};
   render();
@@ -524,6 +554,18 @@ setInterval(()=>{
     beep(880,0.25); setTimeout(()=>beep(880,0.25),300);
     if(S.settings.notify&&typeof Notification!=="undefined"&&Notification.permission==="granted"&&navigator.serviceWorker){
       navigator.serviceWorker.ready.then(reg=>reg.showNotification("Hvilen er over!",{body:"Klar for neste sett.",tag:"jern-rest",renotify:true,vibrate:[220,110,220]}));
+    }
+    if(nextUp&&S.active){
+      const e=S.active.entries[nextUp.ei], ns=e&&e.sets[nextUp.si];
+      if(ns&&!ns.done){
+        const prev=[...e.sets].reverse().find(x=>x.done);
+        if(prev){
+          if(ns.weight==="") ns.weight=prev.weight;
+          if(ns.reps==="") ns.reps=prev.reps;
+        }
+        startCountdown(nextUp.ei,nextUp.si);
+      }
+      nextUp=null;
     }
   }
 },200);
@@ -568,7 +610,8 @@ function activeHTML(){
     h+=`<div class="ex"><div class="ex-head"><span class="name">${esc(exName(e.exerciseId))}${isPR?'<span class="pr">Ny PR</span>':""}</span>
       <span class="restin"><span class="tiny">hvile</span>
       <input type="number" inputmode="numeric" min="0" step="15" value="${e.restSec}" data-rset="${ei}"><span class="tiny">sek</span></span></div>`;
-    if(note) h+=`<div class="hint" style="padding-top:8px;border-bottom:1px solid rgba(46,51,58,.5)">${esc(note)}</div>`;
+    const instr=exInstr(e.exerciseId);
+    if(note||instr) h+=`<div class="hint" style="padding-top:8px;border-bottom:1px solid rgba(46,51,58,.5)">${note?`<strong>${esc(note)}</strong>`:""}${note&&instr?"<br>":""}${instr?esc(instr).replace(/\n/g,"<br>"):""}</div>`;
     e.sets.forEach((s,si)=>{
       const isCd=cd&&cd.ei===ei&&cd.si===si, isRun=running&&running.ei===ei&&running.si===si;
       let cls="",lbl="Start",act="startset";
@@ -588,8 +631,10 @@ function activeHTML(){
       <button data-act="rmex" data-e="${ei}">Fjern øvelse</button></div>`;
     const prev=prevBest(e.exerciseId);
     const sugg=suggestedWeight(e.exerciseId);
-    if(prev) h+=`<div class="hint">Forrige gang: ${prev}${sugg?` · Prøv ${dispW(sugg)} ${unitLbl()} denne gangen`:""}</div>`;
-    if(ei===0&&!e.sets.some(s=>s.done)) h+=`<div class="hint">Start teller ned fra 5. Trykk på knappen igjen når settet er ferdig — da går hviletimeren. Trykk på settnummeret for å markere oppvarming (telles ikke i statistikk).</div>`;
+    if(prev) h+=`<div class="hint">Forrige gang: ${prev}${sugg?(sugg.up
+      ?` · Alle reps sist — prøv ${dispW(sugg.w)} ${unitLbl()}!`
+      :` · Sikt på ${dispW(sugg.w)} ${unitLbl()} igjen`):""}</div>`;
+    if(ei===0&&!e.sets.some(s=>s.done)) h+=`<div class="hint">Start teller ned fra 5. Trykk på knappen igjen når settet er ferdig — da går hviletimeren, og neste sett starter automatisk når hvilen er over. Trykk på settnummeret for å markere oppvarming (telles ikke i statistikk).</div>`;
     h+=`</div>`;
   });
   h+=`<button class="btn ghost sm" data-act="addex" style="margin-bottom:10px">+ Legg til øvelse</button>
@@ -610,9 +655,9 @@ function prevBest(exId){
   return null;
 }
 function cardioHTML(e,ei){
-  const note=exNote(e.exerciseId);
+  const note=exNote(e.exerciseId), instr=exInstr(e.exerciseId);
   let h=`<div class="ex"><div class="ex-head"><span class="name">${esc(exName(e.exerciseId))}<span class="tag">Kondisjon</span></span></div>`;
-  if(note) h+=`<div class="hint" style="padding-top:8px;border-bottom:1px solid rgba(46,51,58,.5)">${esc(note)}</div>`;
+  if(note||instr) h+=`<div class="hint" style="padding-top:8px;border-bottom:1px solid rgba(46,51,58,.5)">${note?`<strong>${esc(note)}</strong>`:""}${note&&instr?"<br>":""}${instr?esc(instr).replace(/\n/g,"<br>"):""}</div>`;
   e.sets.forEach((s,si)=>{
     const isRun=running&&running.ei===ei&&running.si===si;
     let cls="",lbl="Start",act="startcardio";
@@ -735,6 +780,7 @@ function dlgNewEx(){
       <select id="nx-type"><option value="strength">Styrke (vekt × reps)</option><option value="cardio">Kondisjon (km / min)</option></select></label>
     <label class="f"><span class="tiny">Muskelgruppe</span><input type="text" id="nx-m" placeholder="Bein"></label>
     <label class="f"><span class="tiny">Notat (grep, teknikk o.l.)</span><input type="text" id="nx-note" placeholder="F.eks. bredt grep"></label>
+    <label class="f"><span class="tiny">Instruksjoner (hvordan utføre øvelsen)</span><textarea id="nx-instr" placeholder="F.eks. hender i brysthøyde, press rett ned, smalt grep"></textarea></label>
     <div class="inline"><button class="btn ghost sm" data-act="close">Avbryt</button>
     <button class="btn sm" data-act="saveex">Lagre</button></div>`);
 }
@@ -748,6 +794,7 @@ function dlgEditExercise(ex){
       </select></label>
     <label class="f"><span class="tiny">Muskelgruppe</span><input type="text" id="ex-m" value="${esc(ex.muscle||"")}"></label>
     <label class="f"><span class="tiny">Notat (grep, teknikk o.l.)</span><input type="text" id="ex-note" value="${esc(ex.note||"")}" placeholder="F.eks. bredt grep"></label>
+    <label class="f"><span class="tiny">Instruksjoner (hvordan utføre øvelsen)</span><textarea id="ex-instr" placeholder="F.eks. hender i brysthøyde, press rett ned, smalt grep">${esc(ex.instructions||"")}</textarea></label>
     <div class="inline"><button class="btn danger sm" data-act="delex" data-id="${ex.id}">Slett øvelse</button>
     <button class="btn sm" data-act="saveexedit" data-id="${ex.id}">Lagre</button></div>`);
 }
@@ -761,9 +808,9 @@ function dlgEditDay(p,d){
         <input type="number" value="${i.reps}" data-di="${ix}" data-df="reps" aria-label="Reps">
         <button class="iconbtn" data-act="rmitem" data-di="${ix}">✕</button></div>`).join(""):`<div class="small muted">Ingen øvelser ennå.</div>`}
     <div class="sep"></div>
-    <label class="f"><span class="tiny">Legg til øvelse</span>
-      <select id="dy-add"><option value="">Velg …</option>${S.exercises.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("")}</select></label>
-    <button class="btn ghost sm" data-act="additem" style="margin-bottom:12px">Legg til</button>
+    <div class="tiny" style="margin-bottom:4px">Legg til øvelse</div>
+    <input type="text" id="dy-search" placeholder="Søk, eller skriv navn på ny øvelse …" autocomplete="off">
+    <div class="pickerlist" id="dy-list" style="margin-bottom:12px">${exPickerList("","createadditem","additem")}</div>
     <div class="inline"><button class="btn danger sm" data-act="delday">Slett økt</button>
     <button class="btn sm" data-act="saveday">Ferdig</button></div>`);
   $("#dlg").dataset.p=p.id; $("#dlg").dataset.d=d.id;
@@ -791,12 +838,22 @@ function dlgEditSession(s){
     <button class="btn sm" data-act="close">Ferdig</button></div>`);
   $("#dlg").dataset.sid=s.id;
 }
+function exPickerList(q,createAct,pickAct){
+  const query=(q||"").trim().toLowerCase();
+  const list=[...S.exercises].sort((a,b)=>a.name.localeCompare(b.name,"nb"));
+  const hits=query?list.filter(e=>e.name.toLowerCase().includes(query)):list;
+  let h="";
+  if(query&&!list.some(e=>e.name.toLowerCase()===query))
+    h+=`<button class="create" data-act="${createAct}">+ Opprett «${esc(q.trim())}»</button>`;
+  h+=hits.map(e=>`<button data-act="${pickAct}" data-id="${e.id}">${esc(e.name)}${e.type==="cardio"?' <span class="tag">Kondisjon</span>':""}</button>`).join("");
+  if(!h) h=`<div class="small muted" style="padding:8px 0">Ingen treff.</div>`;
+  return h;
+}
 function dlgPickEx(){
   dlg(`<h2>Legg til øvelse</h2>
-    <label class="f"><select id="pk"><option value="">Velg …</option>
-      ${S.exercises.map(e=>`<option value="${e.id}">${esc(e.name)}</option>`).join("")}</select></label>
-    <div class="inline"><button class="btn ghost sm" data-act="close">Avbryt</button>
-    <button class="btn sm" data-act="pickex">Legg til</button></div>`);
+    <input type="text" id="pk-search" placeholder="Søk, eller skriv navn på ny øvelse …" autocomplete="off">
+    <div class="pickerlist" id="pk-list">${exPickerList("","createpickex","pickex")}</div>
+    <button class="btn ghost sm" data-act="close" style="margin-top:10px">Avbryt</button>`);
 }
 function dlgSettings(){
   const s=S.settings;
@@ -807,6 +864,7 @@ function dlgSettings(){
     <label class="f row" style="gap:10px"><input type="checkbox" id="st-snd" ${s.sound?"checked":""} style="width:auto"><span class="small">Lyd når hvilen er ferdig</span></label>
     <label class="f row" style="gap:10px"><input type="checkbox" id="st-notify" ${s.notify?"checked":""} style="width:auto"><span class="small">Systemvarsel når hvilen er ferdig</span></label>
     <div class="small muted" style="margin:-6px 0 12px">Krever tillatelse fra nettleseren. Fungerer best mens appen er åpen i bakgrunnen — ikke garantert med låst skjerm lenge.</div>
+    <label class="f row" style="gap:10px"><input type="checkbox" id="st-backup" ${s.autoBackup?"checked":""} style="width:auto"><span class="small">Automatisk backup etter hver økt</span></label>
     <label class="f"><span class="tiny">Aksentfarge</span><input type="color" id="st-accent" value="${s.accent}"></label>
     <label class="f"><span class="tiny">Enhet for vekt</span>
       <select id="st-unit"><option value="kg" ${s.unit!=="lb"?"selected":""}>Kilo (kg)</option><option value="lb" ${s.unit==="lb"?"selected":""}>Pund (lb)</option></select></label>
@@ -840,7 +898,7 @@ document.addEventListener("click",async ev=>{
   const r=ev.target.closest("[data-rest]");
   if(r){
     const k=r.dataset.rest;
-    if(k==="skip") stopRest();
+    if(k==="skip"){ stopRest(); nextUp=null; }
     else { restEnd+=(k==="add"?15000:-15000); restTotal+=(k==="add"?15:-15); paintRest(); }
     return;
   }
@@ -863,13 +921,15 @@ document.addEventListener("click",async ev=>{
     if(running&&running.ei===ei&&running.si===si){ s.durSec=Math.round((Date.now()-running.start)/1000); }
     running=null;
     const lastInEx=e.sets.every(x=>x.done);
+    const nsi=e.sets.findIndex(x=>!x.done);
+    nextUp=(!lastInEx&&nsi>=0)?{ei,si:nsi}:null;
     startRest(lastInEx?(S.settings.restEx||60):(e.restSec||S.settings.rest),
               lastInEx?"Hvile før neste øvelse":"Hvile mellom sett");
     await save(); render(); return;
   }
   if(a==="undoset"){
     const e=S.active.entries[+b.dataset.e], s=e.sets[+b.dataset.s];
-    s.done=false; s.isPR=false; stopRest(); await save(); render(); return;
+    s.done=false; s.isPR=false; stopRest(); nextUp=null; await save(); render(); return;
   }
   if(a==="togglewarm"){
     const s=S.active.entries[+b.dataset.e].sets[+b.dataset.s];
@@ -900,24 +960,35 @@ document.addEventListener("click",async ev=>{
     }
     await save(); render(); return; }
   if(a==="delset"){ const e=S.active.entries[+b.dataset.e]; if(e.sets.length>1)e.sets.pop(); await save(); render(); return; }
-  if(a==="rmex"){ S.active.entries.splice(+b.dataset.e,1); await save(); render(); return; }
+  if(a==="rmex"){ S.active.entries.splice(+b.dataset.e,1); nextUp=null; await save(); render(); return; }
   if(a==="addex"){ dlgPickEx(); return; }
-  if(a==="pickex"){ const id=$("#pk").value; if(id){
+  if(a==="pickex"){ const id=b.dataset.id; if(id){
       S.active.entries.push(isCardio(id)
         ?{exerciseId:id,restSec:S.settings.rest,sets:[{distanceKm:"",durationMin:"",done:false}]}
-        :{exerciseId:id,restSec:S.settings.rest,sets:[{weight:lastWeight(id),reps:8,done:false}]});
+        :{exerciseId:id,restSec:S.settings.rest,targetReps:8,sets:[{weight:lastWeight(id),reps:8,done:false}]});
+      await save(); } closeDlg(); render(); return; }
+  if(a==="createpickex"){ const n=$("#pk-search").value.trim(); if(n){
+      const ex={id:uid(),name:n,type:"strength",muscle:"",note:""};
+      S.exercises.push(ex);
+      S.active.entries.push({exerciseId:ex.id,restSec:S.settings.rest,targetReps:8,sets:[{weight:"",reps:8,done:false}]});
       await save(); } closeDlg(); render(); return; }
   if(a==="finish"){ finishSession(); go("log"); return; }
-  if(a==="cancel"){ if(confirm("Avbryt økta? Alt du har logget forsvinner.")){ S.active=null; cd=null; running=null; stopRest(); await save(); render(); } return; }
+  if(a==="cancel"){ if(confirm("Avbryt økta? Alt du har logget forsvinner.")){ S.active=null; cd=null; running=null; nextUp=null; stopRest(); await save(); render(); } return; }
 
   if(a==="addprog"){ const n=prompt("Navn på program:"); if(n){S.programs.push({id:uid(),name:n,days:[]});await save();render();} return; }
   if(a==="delprog"){ if(confirm("Slette programmet?")){ S.programs=S.programs.filter(p=>p.id!==b.dataset.p); await save(); render(); } return; }
   if(a==="addday"){ const p=S.programs.find(x=>x.id===b.dataset.p); const n=prompt("Navn på økt:","Økt "+(p.days.length+1));
     if(n){p.days.push({id:uid(),name:n,items:[]});await save();render();} return; }
   if(a==="editday"){ const p=S.programs.find(x=>x.id===b.dataset.p); dlgEditDay(p,p.days.find(x=>x.id===b.dataset.d)); return; }
-  if(a==="additem"){ const id=$("#dy-add").value; if(!id) return;
+  if(a==="additem"){ const id=b.dataset.id; if(!id) return;
     const p=S.programs.find(x=>x.id===$("#dlg").dataset.p), d=p.days.find(x=>x.id===$("#dlg").dataset.d);
     d.items.push(isCardio(id)?{exerciseId:id,sets:1,reps:0,restSec:0}:{exerciseId:id,sets:3,reps:8,restSec:S.settings.rest});
+    await save(); dlgEditDay(p,d); render(); return; }
+  if(a==="createadditem"){ const n=$("#dy-search").value.trim(); if(!n) return;
+    const ex={id:uid(),name:n,type:"strength",muscle:"",note:""};
+    S.exercises.push(ex);
+    const p=S.programs.find(x=>x.id===$("#dlg").dataset.p), d=p.days.find(x=>x.id===$("#dlg").dataset.d);
+    d.items.push({exerciseId:ex.id,sets:3,reps:8,restSec:S.settings.rest});
     await save(); dlgEditDay(p,d); render(); return; }
   if(a==="rmitem"){ const p=S.programs.find(x=>x.id===$("#dlg").dataset.p), d=p.days.find(x=>x.id===$("#dlg").dataset.d);
     d.items.splice(+b.dataset.di,1); await save(); dlgEditDay(p,d); render(); return; }
@@ -927,13 +998,13 @@ document.addEventListener("click",async ev=>{
     const p=S.programs.find(x=>x.id===$("#dlg").dataset.p); p.days=p.days.filter(x=>x.id!==$("#dlg").dataset.d);
     await save(); closeDlg(); render(); return; }
   if(a==="newex"){ dlgNewEx(); return; }
-  if(a==="saveex"){ const n=$("#nx-name").value.trim(); if(n){S.exercises.push({id:uid(),name:n,type:$("#nx-type").value,muscle:$("#nx-m").value.trim(),note:$("#nx-note").value.trim()});await save();}
+  if(a==="saveex"){ const n=$("#nx-name").value.trim(); if(n){S.exercises.push({id:uid(),name:n,type:$("#nx-type").value,muscle:$("#nx-m").value.trim(),note:$("#nx-note").value.trim(),instructions:$("#nx-instr").value.trim()});await save();}
     closeDlg(); render(); return; }
   if(a==="editex"){ const ex=S.exercises.find(x=>x.id===b.dataset.id); if(ex) dlgEditExercise(ex); return; }
   if(a==="saveexedit"){
     const ex=S.exercises.find(x=>x.id===b.dataset.id);
     const n=$("#ex-name").value.trim();
-    if(ex&&n){ ex.name=n; ex.type=$("#ex-type").value; ex.muscle=$("#ex-m").value.trim(); ex.note=$("#ex-note").value.trim(); await save(); }
+    if(ex&&n){ ex.name=n; ex.type=$("#ex-type").value; ex.muscle=$("#ex-m").value.trim(); ex.note=$("#ex-note").value.trim(); ex.instructions=$("#ex-instr").value.trim(); await save(); }
     closeDlg(); render(); return;
   }
   if(a==="delex"){
@@ -962,6 +1033,7 @@ document.addEventListener("click",async ev=>{
 
   if(a==="savesettings"){ S.settings.rest=+$("#st-rest").value||60; S.settings.restEx=+$("#st-restex").value||60; S.settings.bar=+$("#st-bar").value||20;
     S.settings.sound=$("#st-snd").checked;
+    S.settings.autoBackup=$("#st-backup").checked;
     S.settings.accent=$("#st-accent").value||"#39FF14";
     S.settings.unit=$("#st-unit").value;
     S.settings.font=$("#st-font").value;
@@ -984,10 +1056,7 @@ document.addEventListener("click",async ev=>{
     }
     return;
   }
-  if(a==="export"){ const blob=new Blob([JSON.stringify(S,null,2)],{type:"application/json"});
-    const u=URL.createObjectURL(blob), l=document.createElement("a");
-    l.href=u; l.download="jern-backup-"+new Date().toISOString().slice(0,10)+".json"; l.click();
-    setTimeout(()=>URL.revokeObjectURL(u),2000); return; }
+  if(a==="export"){ downloadBackup(); return; }
   if(a==="importBtn"){ $("#impFile").click(); return; }
   if(a==="close"){ closeDlg(); return; }
 });
@@ -1017,6 +1086,8 @@ document.addEventListener("change",async ev=>{
 });
 document.addEventListener("input",ev=>{
   const t=ev.target;
+  if(t.id==="pk-search"){ $("#pk-list").innerHTML=exPickerList(t.value,"createpickex","pickex"); return; }
+  if(t.id==="dy-search"){ $("#dy-list").innerHTML=exPickerList(t.value,"createadditem","additem"); return; }
   if(t.dataset.rex!==undefined){
     S.settings.restEx=Math.max(0,+t.value||0);
     if(restOn&&$("#restLbl").textContent.indexOf("øvelse")>-1) startRest(S.settings.restEx,"Hvile før neste øvelse");

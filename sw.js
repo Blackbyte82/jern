@@ -1,5 +1,5 @@
 /* JERN service worker — gjør appen brukbar uten nett. */
-const CACHE = "jern-v4";
+const CACHE = "jern-v5";
 const ASSETS = [
   "./",
   "./index.html",
