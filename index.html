@@ -367,6 +367,20 @@ function downloadBackup(){
   l.href=u; l.download="jern-backup-"+new Date().toISOString().slice(0,10)+".json"; l.click();
   setTimeout(()=>URL.revokeObjectURL(u),2000);
 }
+/* Deler hele loggen via telefonens delingsmeny, f.eks. til Catbot i Discord.
+   Sendes som .txt fordi Android ikke lar nettsider dele .json-filer. */
+async function shareToCatbot(){
+  const name="jern-catbot-"+dstr()+".txt";
+  const file=new File([JSON.stringify(S)],name,{type:"text/plain"});
+  if(navigator.canShare&&navigator.canShare({files:[file]})){
+    try{ await navigator.share({files:[file],title:"JERN-logg til Catbot"}); }
+    catch(e){ if(e.name!=="AbortError") alert("Deling feilet: "+e.message); }
+    return;
+  }
+  const u=URL.createObjectURL(file), l=document.createElement("a");
+  l.href=u; l.download=name; l.click(); setTimeout(()=>URL.revokeObjectURL(u),2000);
+  alert("Delingsmenyen finnes ikke her, så filen ble lastet ned. Send den til Catbot i Discord.");
+}
 function finishSession(){
   const a=S.active; if(!a) return;
   a.entries.forEach(e=>e.sets=e.sets.filter(s=>s.done));
@@ -521,7 +535,8 @@ function showFinishSummary(s){
     ${newly.length?`<div class="tiny" style="margin-bottom:8px">Nye merker</div>
       ${newly.map((a,i)=>`<div class="badge on pop" style="animation-delay:${(0.15+i*0.3).toFixed(2)}s"><span class="badge-ic">${a.icon}</span>
         <span><span class="badge-name">${esc(a.name)}</span><span class="badge-desc">${esc(a.desc)}</span></span></div>`).join("")}`:""}
-    <button class="btn sm" data-act="close" style="margin-top:14px">Nice</button>`);
+    <div class="inline" style="margin-top:14px"><button class="btn sm" data-act="close">Nice</button>
+    <button class="btn ghost sm" data-act="sharecatbot">Send til Catbot</button></div>`);
 }
 
 /* ---------- hviletimer ---------- */
@@ -1180,7 +1195,8 @@ function dlgSettings(){
     </div>
     <div class="sep"></div>
     <div class="inline" style="margin-bottom:10px"><button class="btn ghost sm" data-act="export">Eksporter data</button>
-    <button class="btn ghost sm" data-act="importBtn">Importer</button></div>
+    <button class="btn ghost sm" data-act="importBtn">Importer</button>
+    <button class="btn ghost sm" data-act="sharecatbot">Send til Catbot</button></div>
     <input type="file" id="impFile" accept="application/json" style="display:none">
     <button class="btn danger sm" data-act="resetall" style="margin-bottom:10px">Nullstill alle data</button>
     <div class="inline"><button class="btn ghost sm" data-act="close">Lukk</button>
@@ -1399,6 +1415,7 @@ document.addEventListener("click",async ev=>{
     return;
   }
   if(a==="export"){ downloadBackup(); return; }
+  if(a==="sharecatbot"){ shareToCatbot(); return; }
   if(a==="importBtn"){ $("#impFile").click(); return; }
   if(a==="close"){ closeDlg(); return; }
 });
