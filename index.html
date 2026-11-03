@@ -381,6 +381,38 @@ async function shareToCatbot(){
   l.href=u; l.download=name; l.click(); setTimeout(()=>URL.revokeObjectURL(u),2000);
   alert("Delingsmenyen finnes ikke her, så filen ble lastet ned. Send den til Catbot i Discord.");
 }
+/* ---------- Home Assistant ----------
+   Sender fullførte økter til en HA-webhook. Adressen lagres kun i innstillingene på telefonen
+   (repoet er offentlig). Sendes som skjemadata (payload=<JSON>) så nettleseren ikke trenger
+   CORS-forhåndssjekk; HA leser den som trigger.data.payload. */
+function isoLocal(ms){
+  const d=new Date(ms), p=n=>String(Math.abs(n)).padStart(2,"0"), o=-d.getTimezoneOffset();
+  return dstr(d)+"T"+p(d.getHours())+":"+p(d.getMinutes())+":"+p(d.getSeconds())+(o>=0?"+":"-")+p(Math.floor(Math.abs(o)/60))+":"+p(Math.abs(o)%60);
+}
+function haPayload(s){
+  const end=Math.max(s.endedAt||s.startedAt,s.startedAt+60000);
+  const ex=s.entries.map(e=>isCardio(e.exerciseId)
+    ? {n:exName(e.exerciseId),c:e.sets.map(x=>[+x.distanceKm||0,+x.durationMin||0])}
+    : {n:exName(e.exerciseId),s:e.sets.map(x=>[+x.weight||0,+x.reps||0,x.warmup?1:0])});
+  const text=ex.map(e=>e.n+": "+(e.c
+    ? e.c.map(([km,m])=>km+" km/"+m+" min").join(", ")
+    : e.s.map(([w,r,wu])=>w+"×"+r+(wu?" (oppv.)":"")).join(", "))).join("\n");
+  return {id:s.id,name:s.name,start:isoLocal(s.startedAt),end:isoLocal(end),
+    dur:Math.round((end-s.startedAt)/60000),vol:Math.round(volume(s)),text,ex};
+}
+function sendToHA(s){
+  const url=(S.settings.haWebhook||"").trim(); if(!url||!s) return false;
+  const body=new URLSearchParams({payload:JSON.stringify(haPayload(s))});
+  if(navigator.sendBeacon&&navigator.sendBeacon(url,body)) return true;
+  fetch(url,{method:"POST",mode:"no-cors",body,keepalive:true}).catch(()=>{});
+  return true;
+}
+async function sendAllToHA(){
+  if(!(S.settings.haWebhook||"").trim()){ alert("Lim inn HA-webhook-adressen og trykk Lagre først."); return; }
+  if(!confirm("Sende alle "+S.sessions.length+" økter til Home Assistant? Økter som allerede finnes der, hoppes over.")) return;
+  for(const s of S.sessions){ sendToHA(s); await new Promise(r=>setTimeout(r,300)); }
+  alert("Sendt "+S.sessions.length+" økter til Home Assistant.");
+}
 function finishSession(){
   const a=S.active; if(!a) return;
   a.entries.forEach(e=>e.sets=e.sets.filter(s=>s.done));
@@ -391,6 +423,7 @@ function finishSession(){
   S.active=null; cd=null; running=null; nextUp=null; stopRest();
   if(hadEntries) showFinishSummary(a);
   save(); render();
+  if(hadEntries) sendToHA(a);
   if(hadEntries&&S.settings.autoBackup) downloadBackup();
 }
 function volume(s){return s.entries.reduce((t,e)=>t+e.sets.reduce((v,x)=>v+(x.warmup?0:(+x.weight||0)*(+x.reps||0)),0),0)}
@@ -1197,6 +1230,9 @@ function dlgSettings(){
     <div class="inline" style="margin-bottom:10px"><button class="btn ghost sm" data-act="export">Eksporter data</button>
     <button class="btn ghost sm" data-act="importBtn">Importer</button>
     <button class="btn ghost sm" data-act="sharecatbot">Send til Catbot</button></div>
+    <label class="f"><span class="tiny">Home Assistant-webhook (sendes automatisk når en økt avsluttes)</span>
+      <input type="url" id="st-ha" placeholder="https://hooks.nabu.casa/..." value="${esc(s.haWebhook||"")}"></label>
+    <div class="inline" style="margin-bottom:10px"><button class="btn ghost sm" data-act="sendallha">Send all historikk til HA</button></div>
     <input type="file" id="impFile" accept="application/json" style="display:none">
     <button class="btn danger sm" data-act="resetall" style="margin-bottom:10px">Nullstill alle data</button>
     <div class="inline"><button class="btn ghost sm" data-act="close">Lukk</button>
@@ -1390,6 +1426,7 @@ document.addEventListener("click",async ev=>{
   if(a==="savesettings"){ S.settings.rest=+$("#st-rest").value||60; S.settings.restEx=+$("#st-restex").value||60; S.settings.bar=+$("#st-bar").value||20;
     S.settings.sound=$("#st-snd").checked;
     S.settings.autoBackup=$("#st-backup").checked;
+    S.settings.haWebhook=($("#st-ha").value||"").trim();
     S.settings.mKcal=+$("#st-mkcal").value||2000; S.settings.mProt=+$("#st-mprot").value||130;
     S.settings.mCarb=+$("#st-mcarb").value||20; S.settings.mFat=+$("#st-mfat").value||150;
     S.settings.accent=$("#st-accent").value||"#39FF14";
@@ -1416,6 +1453,7 @@ document.addEventListener("click",async ev=>{
   }
   if(a==="export"){ downloadBackup(); return; }
   if(a==="sharecatbot"){ shareToCatbot(); return; }
+  if(a==="sendallha"){ sendAllToHA(); return; }
   if(a==="importBtn"){ $("#impFile").click(); return; }
   if(a==="close"){ closeDlg(); return; }
 });
